@@ -1,7 +1,7 @@
 import torch
-from Training import constants
+import constants
 from torch.autograd import Variable
-from Training import processing_utilities
+import processing_utilities
 
 
 def getXY(x_line):

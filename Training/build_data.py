@@ -1,5 +1,5 @@
-from Training import processing_utilities
-from Training import constants
+import processing_utilities
+import constants
 import random
 
 

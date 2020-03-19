@@ -1,4 +1,4 @@
-from Training import processing_utilities
+import processing_utilities
 
 
 def get_batch_RNN(sequences, labels, batch_size, normalize):

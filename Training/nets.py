@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from Training import constants
+import constants
 
 
 class FCNet(nn.Module):

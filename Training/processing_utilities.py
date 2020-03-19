@@ -1,6 +1,6 @@
 import typing
 import torch
-from Training import constants
+import constants
 
 
 class Event:
