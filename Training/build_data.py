@@ -136,3 +136,5 @@ def build_data_for_RNN(is_test):
     output_file.close()
 
 
+if __name__ == "__main__":
+    build_sequences(True)

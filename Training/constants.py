@@ -2,6 +2,10 @@ model_path = "training data/FCnet"
 last_predictions_file_path = "training data/last predictions.txt"
 scores_path = "data/scores.txt"
 
+train_file_path = "../Data/train data stream.txt"
+test_file_path = "../Data/test data stream.txt"
+
+
 train_file_path_labels = "training data/FOR_TRAIN_LABELS.txt"
 train_file_path_sequences = "training data/FOR_TRAIN_SEQS.txt"
 

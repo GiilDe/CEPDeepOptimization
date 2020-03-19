@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="988e3d7a-46f8-4b9d-919e-75b2adb99b78" name="Default Changelist" comment="" />
+    <list default="true" id="988e3d7a-46f8-4b9d-919e-75b2adb99b78" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/constants.py" beforeDir="false" afterPath="$PROJECT_DIR$/constants.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -32,6 +35,7 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
   </component>
   <component name="ProjectId" id="1ZIxTYje6Pg05dBTXU25SZnknk7" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showExcludedFiles" value="true" />
@@ -39,6 +43,7 @@
   </component>
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="true" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.detected.package.tslint" value="true" />
@@ -53,7 +58,7 @@
       <recent name="C:\Users\Gilad\PycharmProjects\NeuralNetOptimization" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.inferring">
+  <component name="RunManager" selected="Python.build_data">
     <configuration default="true" type="PythonConfigurationType" factoryName="Python">
       <module name="CEPDeepOptimization" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -68,6 +73,28 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="build_data" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="CEPDeepOptimization" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/build_data.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="true" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -123,9 +150,11 @@
     <list>
       <item itemvalue="Python.inferring" />
       <item itemvalue="Python.training" />
+      <item itemvalue="Python.build_data" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.build_data" />
         <item itemvalue="Python.inferring" />
         <item itemvalue="Python.training" />
       </list>
@@ -145,11 +174,35 @@
       <workItem from="1584544550056" duration="3937000" />
       <workItem from="1584550494556" duration="986000" />
       <workItem from="1584551587567" duration="4630000" />
+      <workItem from="1584620913182" duration="313000" />
     </task>
+    <task id="LOCAL-00001" summary="fix">
+      <created>1584621126602</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1584621126602</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="fix" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix" />
   </component>
   <component name="WindowStateProjectService">
     <state x="414" y="178" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1584551703419">
@@ -160,42 +213,50 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="811" y="419" key="#com.jetbrains.python.refactoring.move.PyMoveModuleMembersDialog/0.0.1920.1040@0.0.1920.1040" timestamp="1584541872952" />
-    <state width="1877" height="261" key="GridCell.Tab.0.bottom" timestamp="1584621093162">
+    <state x="598" y="118" key="CommitChangelistDialog2" timestamp="1584621124353">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="261" key="GridCell.Tab.0.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1584621093162" />
-    <state width="1877" height="261" key="GridCell.Tab.0.center" timestamp="1584621093162">
+    <state x="598" y="118" key="CommitChangelistDialog2/0.0.1920.1040@0.0.1920.1040" timestamp="1584621124353" />
+    <state width="1877" height="264" key="GridCell.Tab.0.bottom" timestamp="1584621400763">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="261" key="GridCell.Tab.0.center/0.0.1920.1040@0.0.1920.1040" timestamp="1584621093162" />
-    <state width="1877" height="261" key="GridCell.Tab.0.left" timestamp="1584621093161">
+    <state width="1877" height="264" key="GridCell.Tab.0.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1584621400763" />
+    <state width="1877" height="264" key="GridCell.Tab.0.center" timestamp="1584621400763">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="261" key="GridCell.Tab.0.left/0.0.1920.1040@0.0.1920.1040" timestamp="1584621093161" />
-    <state width="1877" height="261" key="GridCell.Tab.0.right" timestamp="1584621093162">
+    <state width="1877" height="264" key="GridCell.Tab.0.center/0.0.1920.1040@0.0.1920.1040" timestamp="1584621400763" />
+    <state width="1877" height="264" key="GridCell.Tab.0.left" timestamp="1584621400762">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="261" key="GridCell.Tab.0.right/0.0.1920.1040@0.0.1920.1040" timestamp="1584621093162" />
-    <state width="1877" height="261" key="GridCell.Tab.1.bottom" timestamp="1584621095967">
+    <state width="1877" height="264" key="GridCell.Tab.0.left/0.0.1920.1040@0.0.1920.1040" timestamp="1584621400762" />
+    <state width="1877" height="264" key="GridCell.Tab.0.right" timestamp="1584621400763">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="261" key="GridCell.Tab.1.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1584621095967" />
-    <state width="1877" height="261" key="GridCell.Tab.1.center" timestamp="1584621095967">
+    <state width="1877" height="264" key="GridCell.Tab.0.right/0.0.1920.1040@0.0.1920.1040" timestamp="1584621400763" />
+    <state width="1877" height="264" key="GridCell.Tab.1.bottom" timestamp="1584621403189">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="261" key="GridCell.Tab.1.center/0.0.1920.1040@0.0.1920.1040" timestamp="1584621095967" />
-    <state width="1877" height="261" key="GridCell.Tab.1.left" timestamp="1584621095967">
+    <state width="1877" height="264" key="GridCell.Tab.1.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1584621403189" />
+    <state width="1877" height="264" key="GridCell.Tab.1.center" timestamp="1584621403189">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="261" key="GridCell.Tab.1.left/0.0.1920.1040@0.0.1920.1040" timestamp="1584621095967" />
-    <state width="1877" height="261" key="GridCell.Tab.1.right" timestamp="1584621095967">
+    <state width="1877" height="264" key="GridCell.Tab.1.center/0.0.1920.1040@0.0.1920.1040" timestamp="1584621403189" />
+    <state width="1877" height="264" key="GridCell.Tab.1.left" timestamp="1584621403189">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="261" key="GridCell.Tab.1.right/0.0.1920.1040@0.0.1920.1040" timestamp="1584621095967" />
+    <state width="1877" height="264" key="GridCell.Tab.1.left/0.0.1920.1040@0.0.1920.1040" timestamp="1584621403189" />
+    <state width="1877" height="264" key="GridCell.Tab.1.right" timestamp="1584621403189">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="264" key="GridCell.Tab.1.right/0.0.1920.1040@0.0.1920.1040" timestamp="1584621403189" />
     <state x="381" y="150" key="SettingsEditor" timestamp="1584540843367">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="381" y="150" key="SettingsEditor/0.0.1920.1040@0.0.1920.1040" timestamp="1584540843367" />
+    <state x="552" y="256" key="Vcs.Push.Dialog.v2" timestamp="1584621131201">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="552" y="256" key="Vcs.Push.Dialog.v2/0.0.1920.1040@0.0.1920.1040" timestamp="1584621131201" />
     <state x="98" y="175" width="1736" height="856" key="com.intellij.history.integration.ui.views.FileHistoryDialog" timestamp="1584545643025">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
@@ -217,6 +278,11 @@
           <line>26</line>
           <option name="timeStamp" value="6" />
         </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/inferring.py</url>
+          <line>42</line>
+          <option name="timeStamp" value="7" />
+        </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
     <watches-manager>
@@ -226,8 +292,9 @@
     </watches-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/CEPDeepOptimization$build_data.coverage" NAME="build_data Coverage Results" MODIFIED="1584621400671" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/CEPDeepOptimization$training.coverage" NAME="training Coverage Results" MODIFIED="1584552007461" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/CEPDeepOptimization$inferring.coverage" NAME="inferring Coverage Results" MODIFIED="1584621093047" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/CEPDeepOptimization$inferring.coverage" NAME="inferring Coverage Results" MODIFIED="1584621147384" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/CEPNeuralNet$inferring.coverage" NAME="inferring Coverage Results" MODIFIED="1584549499355" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/NeuralNetOptimization$inferring.coverage" NAME="inferring Coverage Results" MODIFIED="1584551431308" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
