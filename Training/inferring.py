@@ -14,7 +14,7 @@ def getXY(x_line):
 
 def get_sequence(sequences):
     x_line = sequences.readline()
-    if x_line in {"$", "$\n", " ", "\n", ""}:
+    if x_line in {"$", "$\n", " ", "\n", "", "-1", "-1\n"}:
         return None, True
     return getXY(x_line), False
 
@@ -28,11 +28,15 @@ def infer():
         sequences.readline()
         scores_file.write(str(-1) + "\n")
     x, finished = get_sequence(sequences)
+    i = 0
     while not finished and type(x) != str:
         x = x.reshape((1, -1))
         y_hat = net.forward(x)
-        scores_file.write(str(y_hat.item()) + "\n")
+        scores_file.write(str(max(y_hat.item(), 0)) + "\n")
         x, finished = get_sequence(sequences)
+        if i % 1000 == 0:
+            print(i)
+        i += 1
     for _ in range(constants.window_limit[0]):
         scores_file.write(str(-1) + "\n")
     scores_file.close()

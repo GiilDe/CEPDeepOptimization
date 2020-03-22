@@ -13,17 +13,16 @@ d.type = 'D' and
 done
 
 
+
 select * from Event
 match_recognize (
-measures A as a, B as b, C as c
-after match skip to current row
-pattern (A B C)
-define
-A as A.type = 'A',
-B as B.type = 'B',
-C as C.type = 'C'
+measures A as a, B as b, C as c, D as d
+after match skip to next row
+pattern (A B C D)
 )
 done
+
+
 
 
 select * from Event

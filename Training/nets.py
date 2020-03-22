@@ -19,8 +19,9 @@ class FCNet(nn.Module):
         self.relu3 = nn.ReLU()
         self.drop3 = nn.Dropout()
         self.fc4 = nn.Linear(7, 1)
+        self.relu4 = nn.ReLU()
         self.modules = [self.fc1, self.b_norm1, self.relu1, self.fc2, self.b_norm2, self.relu2,
-                        self.fc3, self.b_norm3, self.relu3, self.fc4]
+                        self.fc3, self.b_norm3, self.relu3, self.fc4, self.relu4]
 
     def forward(self, x):
         for module in self.modules:
@@ -31,7 +32,7 @@ class FCNet(nn.Module):
 class FCNetForRNN(nn.Module):
     def __init__(self):
         super(FCNetForRNN, self).__init__()
-        self.fc1 = nn.Linear(Constants.RNN_hidden_size * 2, 40)
+        self.fc1 = nn.Linear(constants.RNN_hidden_size * 2, 40)
         self.b_norm1 = nn.BatchNorm1d(40)
         self.relu1 = nn.ReLU()
         self.drop1 = nn.Dropout()

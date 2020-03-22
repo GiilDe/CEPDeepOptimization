@@ -24,12 +24,13 @@ def build_sequences(is_test):
     seqs_file = open(file_path_seqs, 'w')
     events = [processing_utilities.get_event_from_str(line, *constants.event_format) for line in data_stream]
     window_size = constants.window_limit[0]
-    relevant_events = events[window_size - 1:len(events) - window_size]
-    for i, event in enumerate(relevant_events):
-        relevant_events = events[i - (window_size - 1):i + window_size]
-        for event in relevant_events:
+    for i in range(window_size - 1, len(events) - window_size):
+        window = events[i - (window_size - 1):i + window_size]
+        for event in window:
             seqs_file.write(str(event) + ";")
         seqs_file.write("\n")
+        if i % 1000 == 0:
+            print(i)
     data_stream.close()
     seqs_file.close()
 
@@ -93,7 +94,7 @@ def build_sequences_RNN(is_test):
     seqs_file.close()
 
 
-def build_data_with_values():
+def build_data_stream():
     def write_event(output_file, types, counter):
         name = str(random.choice(types))
         s_counter = str(counter)
@@ -115,7 +116,7 @@ def build_data_with_values():
     test_output_file.close()
 
 
-def build_data_for_RNN(is_test):
+def build_data_stream_RNN(is_test):
     output_file = open(constants.test_file_path_RNN, "w") if is_test else open(constants.train_file_path_RNN, "w")
     types = ['A', 'A', 'A', 'B', 'B', 'C', 'D']
     time = 0

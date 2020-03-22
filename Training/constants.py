@@ -1,6 +1,6 @@
-model_path = "training data/FCnet"
+model_path = "training data/FCnet_15"
 last_predictions_file_path = "training data/last predictions.txt"
-scores_path = "data/scores.txt"
+scores_path = "../Data/scores.txt"
 
 train_file_path = "../Data/train data stream.txt"
 test_file_path = "../Data/test data stream.txt"

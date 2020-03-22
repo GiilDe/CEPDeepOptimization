@@ -1,7 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="9df2c6f1-dc43-48e1-9403-ea58bbb5a2b9" name="Default Changelist" comment="" />
+    <list default="true" id="9df2c6f1-dc43-48e1-9403-ea58bbb5a2b9" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/Application.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/output_analyze/build_graphs.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/output_analyze/output_analyze.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/.name" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/libraries/gradle_wrapper.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/misc.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/5.2.1/executionHistory/executionHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/5.2.1/executionHistory/executionHistory.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/5.2.1/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/5.2.1/executionHistory/executionHistory.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/5.2.1/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/5.2.1/fileHashes/fileHashes.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/5.2.1/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/5.2.1/fileHashes/fileHashes.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/5.2.1/javaCompile/classAnalysis.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/5.2.1/javaCompile/classAnalysis.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/5.2.1/javaCompile/javaCompile.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/5.2.1/javaCompile/javaCompile.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CEPDeepOptimization.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/classes/java/main/Event.class" beforeDir="false" afterPath="$PROJECT_DIR$/build/classes/java/main/Event.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/classes/java/main/Main.class" beforeDir="false" afterPath="$PROJECT_DIR$/build/classes/java/main/Main.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pattern" beforeDir="false" afterPath="$PROJECT_DIR$/pattern" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Event.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Event.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Main.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Training/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../Training/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Training/build_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/../Training/build_data.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Training/constants.py" beforeDir="false" afterPath="$PROJECT_DIR$/../Training/constants.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Training/inferring.py" beforeDir="false" afterPath="$PROJECT_DIR$/../Training/inferring.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Training/nets.py" beforeDir="false" afterPath="$PROJECT_DIR$/../Training/nets.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Training/training.py" beforeDir="false" afterPath="$PROJECT_DIR$/../Training/training.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -12,7 +47,11 @@
       <ProjectState />
     </projectState>
   </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
   <component name="ProjectId" id="1ZJBvusNKx4qtcWiOZkxR5WQg2k" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showExcludedFiles" value="true" />
@@ -20,9 +59,11 @@
   </component>
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="aspect.path.notification.shown" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="jdk.selected.PYTHON_MODULE" value="Python 3.7 (cs236605-hw)" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/output_analyze" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.detected.package.tslint" value="true" />
     <property name="node.js.path.for.package.eslint" value="project" />
@@ -31,23 +72,94 @@
     <property name="node.js.selected.package.tslint" value="(autodetect)" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
+    <property name="project.structure.last.edited" value="Modules" />
+    <property name="project.structure.proportion" value="0.15" />
+    <property name="project.structure.side.proportion" value="0.22528736" />
+    <property name="settings.editor.selected.configurable" value="PyScientificConfigurable" />
+    <property name="show.unlinked.gradle.project.popup" value="true" />
+  </component>
+  <component name="PyConsoleOptionsProvider">
+    <option name="myPythonConsoleState">
+      <console-settings module-name="Application" sdk-home="C:\Users\Gilad\Anaconda3\envs\cs236605-hw\python.exe" working-directory="$PROJECT_DIR$">
+        <option name="mySdkHome" value="C:\Users\Gilad\Anaconda3\envs\cs236605-hw\python.exe" />
+        <option name="myModuleName" value="Application" />
+        <option name="myWorkingDirectory" value="$PROJECT_DIR$" />
+      </console-settings>
+    </option>
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\Gilad\IdeaProjects\CEP" />
       <recent name="C:\Users\Gilad\IdeaProjects\CEP\src\main\java" />
     </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\Gilad\CEPDeepOptimization\Application\output data topk" />
+      <recent name="C:\Users\Gilad\CEPDeepOptimization\Application\output_analyze" />
+    </key>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Application.Main">
     <configuration name="Main" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="ALTERNATIVE_JRE_PATH" value="11.0.5" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
       <option name="MAIN_CLASS_NAME" value="Main" />
-      <module name="CEP.main" />
+      <module name="Application.main" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="build_graphs (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="output_analyze" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/output_analyze" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/output_analyze/build_graphs.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="build_graphs" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Application" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="C:\Users\Gilad\Anaconda3\envs\cs236605-hw\python.exe" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="C:\Users\Gilad\CEPDeepOptimization\Application\output_analyze\build_graphs.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Application.Main" />
+      <item itemvalue="Python.build_graphs" />
+      <item itemvalue="Python.build_graphs (1)" />
+    </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.build_graphs (1)" />
+        <item itemvalue="Python.build_graphs" />
         <item itemvalue="Application.Main" />
       </list>
     </recent_temporary>
@@ -63,6 +175,14 @@
       <option name="presentableId" value="Default" />
       <updated>1584547550489</updated>
       <workItem from="1584547553475" duration="9969000" />
+      <workItem from="1584792901563" duration="948000" />
+      <workItem from="1584793878100" duration="110000" />
+      <workItem from="1584794003912" duration="67000" />
+      <workItem from="1584794084150" duration="8115000" />
+      <workItem from="1584803781673" duration="19164000" />
+      <workItem from="1584868777092" duration="17019000" />
+      <workItem from="1584889374977" duration="107000" />
+      <workItem from="1584893797770" duration="120000" />
     </task>
     <servers />
   </component>
@@ -70,37 +190,112 @@
     <option name="version" value="1" />
   </component>
   <component name="WindowStateProjectService">
-    <state width="1479" height="198" key="GridCell.Tab.0.bottom" timestamp="1584565290357">
+    <state x="693" y="205" key="#Main" timestamp="1584793016591">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1479" height="198" key="GridCell.Tab.0.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1584565290357" />
-    <state width="1479" height="198" key="GridCell.Tab.0.center" timestamp="1584565290357">
+    <state x="693" y="205" key="#Main/0.0.1920.1040@0.0.1920.1040" timestamp="1584793016591" />
+    <state x="552" y="181" key="#Plugins" timestamp="1584794068498">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1479" height="198" key="GridCell.Tab.0.center/0.0.1920.1040@0.0.1920.1040" timestamp="1584565290357" />
-    <state width="1479" height="198" key="GridCell.Tab.0.left" timestamp="1584565290357">
+    <state x="552" y="181" key="#Plugins/0.0.1920.1040@0.0.1920.1040" timestamp="1584794068498" />
+    <state x="414" y="178" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1584798667199">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1479" height="198" key="GridCell.Tab.0.left/0.0.1920.1040@0.0.1920.1040" timestamp="1584565290357" />
-    <state width="1479" height="198" key="GridCell.Tab.0.right" timestamp="1584565290357">
+    <state x="414" y="178" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040@0.0.1920.1040" timestamp="1584798667199" />
+    <state x="765" y="227" key="#com.intellij.ide.util.MemberChooser" timestamp="1584816032939">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1479" height="198" key="GridCell.Tab.0.right/0.0.1920.1040@0.0.1920.1040" timestamp="1584565290357" />
-    <state width="1479" height="247" key="GridCell.Tab.1.bottom" timestamp="1584565290357">
+    <state x="765" y="227" key="#com.intellij.ide.util.MemberChooser/0.0.1920.1040@0.0.1920.1040" timestamp="1584816032939" />
+    <state x="546" y="156" key="#com.intellij.openapi.projectRoots.ui.ProjectJdksEditor" timestamp="1584795816473">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1479" height="247" key="GridCell.Tab.1.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1584565290357" />
-    <state width="1479" height="247" key="GridCell.Tab.1.center" timestamp="1584565290357">
+    <state x="546" y="156" key="#com.intellij.openapi.projectRoots.ui.ProjectJdksEditor/0.0.1920.1040@0.0.1920.1040" timestamp="1584795816473" />
+    <state x="796" y="215" key="#com.intellij.openapi.roots.ui.configuration.libraryEditor.LibraryEditorDialog" timestamp="1584798781915">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1479" height="247" key="GridCell.Tab.1.center/0.0.1920.1040@0.0.1920.1040" timestamp="1584565290357" />
-    <state width="1479" height="247" key="GridCell.Tab.1.left" timestamp="1584565290357">
+    <state x="796" y="215" key="#com.intellij.openapi.roots.ui.configuration.libraryEditor.LibraryEditorDialog/0.0.1920.1040@0.0.1920.1040" timestamp="1584798781915" />
+    <state x="720" y="216" key="DetectedRootsChooserDialog" timestamp="1584798744684">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1479" height="247" key="GridCell.Tab.1.left/0.0.1920.1040@0.0.1920.1040" timestamp="1584565290357" />
-    <state width="1479" height="247" key="GridCell.Tab.1.right" timestamp="1584565290357">
+    <state x="720" y="216" key="DetectedRootsChooserDialog/0.0.1920.1040@0.0.1920.1040" timestamp="1584798744684" />
+    <state x="723" y="188" key="FileChooserDialogImpl" timestamp="1584799625392">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1479" height="247" key="GridCell.Tab.1.right/0.0.1920.1040@0.0.1920.1040" timestamp="1584565290357" />
+    <state x="723" y="188" key="FileChooserDialogImpl/0.0.1920.1040@0.0.1920.1040" timestamp="1584799625392" />
+    <state width="1877" height="239" key="GridCell.Tab.0.bottom" timestamp="1584888144824">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="239" key="GridCell.Tab.0.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1584888144824" />
+    <state width="1877" height="239" key="GridCell.Tab.0.center" timestamp="1584888144824">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="239" key="GridCell.Tab.0.center/0.0.1920.1040@0.0.1920.1040" timestamp="1584888144824" />
+    <state width="1877" height="239" key="GridCell.Tab.0.left" timestamp="1584888144824">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="239" key="GridCell.Tab.0.left/0.0.1920.1040@0.0.1920.1040" timestamp="1584888144824" />
+    <state width="1877" height="239" key="GridCell.Tab.0.right" timestamp="1584888144824">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="239" key="GridCell.Tab.0.right/0.0.1920.1040@0.0.1920.1040" timestamp="1584888144824" />
+    <state width="1877" height="239" key="GridCell.Tab.1.bottom" timestamp="1584888144824">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="239" key="GridCell.Tab.1.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1584888144824" />
+    <state width="1877" height="239" key="GridCell.Tab.1.center" timestamp="1584888144824">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="239" key="GridCell.Tab.1.center/0.0.1920.1040@0.0.1920.1040" timestamp="1584888144824" />
+    <state width="1877" height="239" key="GridCell.Tab.1.left" timestamp="1584888144824">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="239" key="GridCell.Tab.1.left/0.0.1920.1040@0.0.1920.1040" timestamp="1584888144824" />
+    <state width="1877" height="239" key="GridCell.Tab.1.right" timestamp="1584888144824">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="239" key="GridCell.Tab.1.right/0.0.1920.1040@0.0.1920.1040" timestamp="1584888144824" />
+    <state x="783" y="457" key="ReplaceDuplicatesPrompt" timestamp="1584812242508">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="783" y="457" key="ReplaceDuplicatesPrompt/0.0.1920.1040@0.0.1920.1040" timestamp="1584812242508" />
+    <state x="446" y="76" width="1222" height="845" key="SettingsEditor" timestamp="1584883463414">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="446" y="76" width="1222" height="845" key="SettingsEditor/0.0.1920.1040@0.0.1920.1040" timestamp="1584883463414" />
+    <state x="715" y="367" key="cloudConfig.SelfSettingsDialog" timestamp="1584793847013">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="715" y="367" key="cloudConfig.SelfSettingsDialog/0.0.1920.1040@0.0.1920.1040" timestamp="1584793847013" />
+    <state x="668" y="347" key="com.intellij.ide.util.TipDialog" timestamp="1584893925518">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="668" y="347" key="com.intellij.ide.util.TipDialog/0.0.1920.1040@0.0.1920.1040" timestamp="1584893925518" />
+    <state x="690" y="282" width="540" height="482" key="extract.method.dialog" timestamp="1584812239246">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="690" y="282" width="540" height="482" key="extract.method.dialog/0.0.1920.1040@0.0.1920.1040" timestamp="1584812239246" />
+    <state x="349" y="116" key="new project wizard" timestamp="1584799604688">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="349" y="116" key="new project wizard/0.0.1920.1040@0.0.1920.1040" timestamp="1584799604688" />
+    <state x="668" y="154" key="refactoring.ChangeSignatureDialog" timestamp="1584878349940">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="668" y="154" key="refactoring.ChangeSignatureDialog/0.0.1920.1040@0.0.1920.1040" timestamp="1584878349940" />
+    <state x="629" y="238" width="672" height="678" key="search.everywhere.popup" timestamp="1584815559759">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="629" y="238" width="672" height="678" key="search.everywhere.popup/0.0.1920.1040@0.0.1920.1040" timestamp="1584815559759" />
+  </component>
+  <component name="XDebuggerManager">
+    <watches-manager>
+      <configuration name="Remote">
+        <watch expression="event" />
+      </configuration>
+    </watches-manager>
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/Application$build_graphs__1_.coverage" NAME="build_graphs (1) Coverage Results" MODIFIED="1584888061567" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/output_analyze" />
+    <SUITE FILE_PATH="coverage/Application$build_graphs.coverage" NAME="build_graphs Coverage Results" MODIFIED="1584870116471" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

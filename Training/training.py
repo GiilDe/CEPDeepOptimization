@@ -97,7 +97,7 @@ def net_train(epochs, batch_interval, batch_size, normalize=False, epoch_interva
             report_file.write(train_losses + "\n")
             report_file.write(test_losses + "\n")
             report_file.write(pearson_corr + "\n")
-    torch.save(net, constants.model_path)
+        torch.save(net, constants.model_path + "_" + str(epoch))
 
 
 def dump_lengthes():
@@ -175,6 +175,6 @@ def net_test(net, batch_size, normalize=False, loss_per_label=False):
 
 
 if __name__ == "__main__":
-    net_train(1, 1000, 32, report_path="data/report.txt")
+    net_train(100, 1000, 32, report_path="training data/report.txt")
 
 
