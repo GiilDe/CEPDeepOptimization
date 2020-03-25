@@ -4,7 +4,7 @@ import constants
 
 
 class FCNet(nn.Module):
-    def __init__(self):
+    def __init__(self, normalize=False):
         super(FCNet, self).__init__()
         self.fc1 = nn.Linear((constants.window_limit[0]*2-1)*5, 40)
         self.b_norm1 = nn.BatchNorm1d(40)
@@ -22,6 +22,9 @@ class FCNet(nn.Module):
         self.relu4 = nn.ReLU()
         self.modules = [self.fc1, self.b_norm1, self.relu1, self.fc2, self.b_norm2, self.relu2,
                         self.fc3, self.b_norm3, self.relu3, self.fc4, self.relu4]
+        if normalize:
+            self.tanh1 = nn.Tanh()
+            self.modules.append(self.tanh1)
 
     def forward(self, x):
         for module in self.modules:

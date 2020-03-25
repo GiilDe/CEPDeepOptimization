@@ -73,4 +73,4 @@ def convert_event(event: Event):
     values = list(event.attributes.values())
     type = type_to_vec[event.get_type()]
     values = type + [values[1]]
-    return torch.tensor(values, dtype=torch.float32)
+    return torch.tensor(values, dtype=torch.float32, device=constants.device)

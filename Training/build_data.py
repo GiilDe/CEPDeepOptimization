@@ -139,3 +139,4 @@ def build_data_stream_RNN(is_test):
 
 if __name__ == "__main__":
     build_sequences(True)
+    build_sequences(False)

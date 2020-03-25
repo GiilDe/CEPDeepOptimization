@@ -1,13 +1,16 @@
+import pickle
+
+import scipy.stats as stats
+import sklearn.metrics as metrics
 import torch
+import torch.functional
 import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
-import nets, constants
 import numpy as np
-import scipy.stats as stats
-import sklearn.metrics as metrics
-import torch.functional
-import pickle
+
+import constants
+import nets
 import processing_utilities
 
 loss_function_type = torch.nn.MSELoss
@@ -20,7 +23,7 @@ def get_batch(sequences, labels, batch_size, normalize):
     i = 0
     while i < batch_size:
         x_line, y_line = sequences.readline(), labels.readline()
-        if x_line in {"$", "$\n", " ", "\n", ""}:
+        if x_line in constants.stop_lines:
             finished = True
             break
         x, y = getXY(x_line, y_line, normalize)
@@ -28,34 +31,37 @@ def get_batch(sequences, labels, batch_size, normalize):
         batch_y.append(y)
         i += 1
 
-    batch_x = torch.stack(batch_x) if batch_x != [] else "-1"
-    batch_y = torch.stack(batch_y) if batch_y != [] else "-1"
+    batch_x = torch.stack(batch_x) if batch_x != [] else None
+    batch_y = torch.stack(batch_y) if batch_y != [] else None
     return batch_x, batch_y, finished
 
 
-def getXY(x_line, y_line, normalize=False):
+def getXY(x_line, y_line, normalize):
     x_temp = x_line.split(";")[:-1]
     events = [processing_utilities.convert_event(processing_utilities.get_event_from_str(event, *constants.event_format))
               for event in x_temp]
     x = Variable(torch.stack(events), requires_grad=True).reshape(-1)
-    y = Variable(torch.tensor([float(y_line.split("\n")[0])]))
+    y = Variable(torch.tensor([float(y_line.split("\n")[0])], device=constants.device))
     if normalize:
         y = torch.tanh(y)
     return x, y
 
 
-def net_train(epochs, batch_interval, batch_size, normalize=False, epoch_interval=1, report_path="data/report.txt"):
+def net_train(epochs, batch_interval, batch_size, normalize=False, epoch_interval=1):
     net = nets.FCNet()
+    net.to(device=constants.device)
     criterion = loss_function_type()
-    optimizer = optim.SGD(net.parameters(), lr=0.00001, momentum=0.9)
+    criterion.to(device=constants.device)
+    optimizer = optim.SGD(net.parameters(), lr=0.0001, momentum=0.9)
+
     epochs_train_losses = []
     epochs_test_losses = []
     epochs_test_pearson_corrs = []
-    epochs_test_spearman_corrs = []
     epochs_test_mutual_infos = []
+
     seqs_file = constants.train_file_path_sequences
     labels_file = constants.train_file_path_labels
-    report_file = open(report_path, 'w')
+    report_file = open(constants.training_report_path, 'w')
     for epoch in range(epochs):
         current_epoch_losses = []
         sequences = open(seqs_file, 'r')
@@ -65,8 +71,9 @@ def net_train(epochs, batch_interval, batch_size, normalize=False, epoch_interva
         for _ in range(constants.window_limit[0]):
             sequences.readline()
             labels.readline()
-        x, y, finished = get_batch(sequences, labels, batch_size, normalize)
-        while not finished and type(x) != str:
+        x, y, almost_finished = get_batch(sequences, labels, batch_size, normalize)
+        finished = False
+        while not finished and x is not None:
             optimizer.zero_grad()
             y_hat = net.forward(x)
             loss = criterion(y_hat, y)
@@ -78,16 +85,16 @@ def net_train(epochs, batch_interval, batch_size, normalize=False, epoch_interva
                 print('Train Epoch: {} \tBatch Loss: {:.6f}'.format(
                     epoch, batch_loss))
             batch_idx += 1
-            x, y, finished = get_batch(sequences, labels, batch_size, normalize)
+            finished = almost_finished
+            x, y, almost_finished = get_batch(sequences, labels, batch_size, normalize)
         sequences.close()
         labels.close()
         if epoch % epoch_interval == 0:
             epochs_train_losses.append(np.average(current_epoch_losses))
-            test_loss, pearson_corr, mutual_info, spearman_corr = net_test(net, batch_size, normalize)
+            test_loss, pearson_corr, mutual_info = net_test(net, batch_size, normalize)
             epochs_test_losses.append(test_loss)
             epochs_test_pearson_corrs.append(pearson_corr)
             epochs_test_mutual_infos.append(mutual_info)
-            epochs_test_spearman_corrs.append(spearman_corr)
             train_losses = "Epochs train losses: " + str(epochs_train_losses)
             test_losses = "Epochs test losses: " + str(epochs_test_losses)
             pearson_corr = "Epochs test pearson corrs: " + str(epochs_test_pearson_corrs)
@@ -123,6 +130,7 @@ def dump_lengthes():
 
 def net_test(net, batch_size, normalize=False, loss_per_label=False):
     criterion = nn.MSELoss()
+    criterion.to(device=constants.device)
     epoch_losses = []
     sequences = open(constants.test_file_path_sequences, 'r')
     labels = open(constants.test_file_path_labels, 'r')
@@ -136,7 +144,7 @@ def net_test(net, batch_size, normalize=False, loss_per_label=False):
     all_y = []
     all_y_hat = []
     x, y, finished = get_batch(sequences, labels, batch_size, normalize)
-    while not finished and type(x) != str:
+    while not finished and x is not None:
         all_y += [row.data.item() for row in y]
         y_hat = net.forward(x)
         all_y_hat += [row.data.item() for row in y_hat]
@@ -149,7 +157,6 @@ def net_test(net, batch_size, normalize=False, loss_per_label=False):
         x, y, finished = get_batch(sequences, labels, batch_size, normalize)
 
     pearson_corr = stats.pearsonr(all_y, all_y_hat)[0]
-    spearman_corr = stats.spearmanr(all_y, all_y_hat)[0]
     mutual_info = metrics.mutual_info_score(all_y, all_y_hat)
     if loss_per_label:
         loss_per_label = dict()
@@ -171,10 +178,9 @@ def net_test(net, batch_size, normalize=False, loss_per_label=False):
     sequences.close()
     labels.close()
     test_loss = np.average(epoch_losses)
-    return test_loss, pearson_corr, mutual_info, spearman_corr
+    return test_loss, pearson_corr, mutual_info
 
 
 if __name__ == "__main__":
-    net_train(100, 1000, 32, report_path="training data/report.txt")
-
+    net_train(100, 1000, 32)
 
