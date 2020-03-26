@@ -1,6 +1,6 @@
 import torch
 
-model_path = "training data/FCnet"
+model_path = "training data/FCnet_16"
 last_predictions_file_path = "training data/last predictions.txt"
 scores_path = "../Data/scores.txt"
 
@@ -8,11 +8,11 @@ train_file_path = "../Data/train data stream.txt"
 test_file_path = "../Data/test data stream.txt"
 
 
-train_file_path_labels = "training data/FOR_TRAIN_LABELS.txt"
-train_file_path_sequences = "training data/FOR_TRAIN_SEQS.txt"
+train_file_path_labels = "training data/FOR_TRAIN_LABELS2.txt"
+train_file_path_sequences = "training data/FOR_TRAIN_SEQS2.txt"
 
-test_file_path_labels = "training data/FOR_TEST_LABELS.txt"
-test_file_path_sequences = "training data/FOR_TEST_SEQS.txt"
+test_file_path_labels = "training data/FOR_TEST_LABELS2.txt"
+test_file_path_sequences = "training data/FOR_TEST_SEQS2.txt"
 
 
 train_file_path_labels_RNN = "training data/FOR_TRAIN_LABELS_RNN.txt"
@@ -30,6 +30,7 @@ window_limit = (8, True)
 
 stop_lines = {"$", "$\n", " ", "\n", "", "-1", "-1\n"}
 
+chunk_size = 10**4
 
 # if torch.cuda.is_available():
 #     dev = "cuda"
@@ -37,3 +38,6 @@ stop_lines = {"$", "$\n", " ", "\n", "", "-1", "-1\n"}
 dev = "cpu"
 
 device = torch.device(dev)
+
+test_size = 1000000
+train_size = 7913670

@@ -1,9 +1,9 @@
 import os
 import matplotlib.pyplot as plt
+import pandas as pd
 
-
-threshold_details = "../output data/details/current details/"
-topk_details = "../output data/details/current details/"
+threshold_details = "../output data/details/"
+topk_details = "../output data/details/"
 scores_path = "../../Data/scores.txt"
 all_events_num = 1000000
 all_matches_num = 124603
@@ -90,11 +90,10 @@ def maximum_k_graphs():
 def threshold_graphs():
     all = []
     for file_name in os.listdir(threshold_details):
-        file = open(threshold_details + file_name, 'r')
-        lines = file.readlines()
-        threshold = float(lines[0].split("\n")[0])
-        events_num = float(lines[1].split("\n")[0])
-        matches_num = float(lines[2].split("\n")[0])
+        file = pd.read_csv(threshold_details + file_name, header=None)
+        threshold = file.at[0, 0]
+        events_num = file.at[1, 0]
+        matches_num = file.at[2, 0]
         all.append((threshold, events_num, matches_num))
 
     all = sorted(all, key=lambda x: x[0])

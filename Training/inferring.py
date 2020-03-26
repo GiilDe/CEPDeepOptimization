@@ -2,6 +2,7 @@ import torch
 import constants
 from torch.autograd import Variable
 import processing_utilities
+import pandas as pd
 
 
 def getX(x_line):
@@ -40,25 +41,26 @@ def infer():
     net = torch.load(constants.model_path)
     net.to(device=constants.device)
     net.eval()
-    scores_file = open(constants.scores_path, 'w')
-    sequences = open(constants.test_file_path_sequences, 'r')
+    sequences = open("training data/FOR_TEST_SEQS - Copy.txt", 'r')
+    df = pd.DataFrame()
     for _ in range(constants.window_limit[0] - 1):
-        sequences.readline()
-        scores_file.write(str(-1) + "\n")
-    x, finished = get_batch(sequences)
+        df = df.append(pd.Series(-1), ignore_index=True)
+    x, almost_finished = get_batch(sequences)
     i = 0
+    finished = False
     while not finished and x is not None:
         y_hat = net.forward(x)
         for row in y_hat:
-            scores_file.write(str(max(row.item(), 0)) + "\n")
-        x, finished = get_batch(sequences)
+            df = df.append(pd.Series(row.item()), ignore_index=True)
+        finished = almost_finished
+        x, almost_finished = get_batch(sequences)
         if i % 1000 == 0:
             print(i)
         i += 32
     for _ in range(constants.window_limit[0] - 1):
-        scores_file.write(str(-1) + "\n")
-    scores_file.close()
+        df = df.append(pd.Series(-1), ignore_index=True)
     sequences.close()
+    df.to_csv(constants.scores_path, index=False, header=False)
 
 
 if __name__ == "__main__":

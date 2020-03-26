@@ -9,6 +9,10 @@ import com.espertech.esper.compiler.client.EPCompiler;
 import com.espertech.esper.compiler.client.EPCompilerProvider;
 import com.espertech.esper.runtime.client.*;
 import org.antlr.v4.runtime.misc.Pair;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVPrinter;
+import org.apache.commons.csv.CSVRecord;
 
 import java.io.*;
 import java.util.*;
@@ -27,10 +31,10 @@ public class Main {
     final static String testElaboratedMatchesPath = "Application/output data/matches/test elaborated matches.txt";
     final static int testEventsNum = 1000000;
 
-    final static String testFilterMatchesPathPrefix = "Application/output data/matches/test matches";
-    final static String testFilterElaboratedMatchesPathPrefix = "Application/output data/matches/test elaborated matches";
+    final static String testMatchesPathPrefix = "Application/output data/matches/test matches";
+    final static String testElaboratedMatchesPathPrefix = "Application/output data/matches/test elaborated matches";
 
-    final static String testFilterDetailsPathPrefix = "Application/output data/details";
+    final static String testFilterDetailsPathPrefix = "Application/output data/details/threshold details/details";
 
     final static String patternPath = "Application/pattern";
 
@@ -76,43 +80,48 @@ public class Main {
     };
 
 
-    public static void main(String[] s) throws IOException {
-        query(trainStreamPath, trainMatchesPath, trainElaboratedMatchesPath,
+    public static void main(String[] s) {
+        try {
+            query(testStreamPath, testMatchesPathPrefix, testElaboratedMatchesPathPrefix, testFilterDetailsPathPrefix,
+                    scoresPath, testEventsNum, 0.2, null, true);
+        } catch (IOException ex){
+            ex.printStackTrace();
+        }
+    }
+
+    private static void queryTrainData() throws IOException {
+        query(trainStreamPath, trainMatchesPath, trainElaboratedMatchesPath, testFilterDetailsPathPrefix,
                 null, trainEventsNum, null, null, true);
     }
 
-    private static void queryTrainData() throws FileNotFoundException {
-        query(trainStreamPath, trainMatchesPath, trainElaboratedMatchesPath, null, trainEventsNum,
-                null, null, true);
-    }
-
-    private static void testThresholds() throws FileNotFoundException {
-        double[] thresholds = new double[]{0, 0.25, 0.5, 0.75, 1, 1.25, 1.5};
-        for(double threshold : thresholds){
-            query(testStreamPath, testFilterMatchesPathPrefix, testFilterElaboratedMatchesPathPrefix,
+    private static void testThresholds() throws IOException {
+        double threshold = 0.0;
+        for (int i = 0; i < 10; i++) {
+            query(testStreamPath, testMatchesPathPrefix, testElaboratedMatchesPathPrefix, testFilterDetailsPathPrefix,
                     scoresPath, testEventsNum, threshold, null, false);
+            threshold += 0.12;
         }
     }
 
-    private static void testThresholdsNormalized() throws FileNotFoundException {
+    private static void testThresholdsNormalized() throws IOException {
         double[] thresholds = new double[]{0, 0.04, 0.08, 0.12, 0.16, 0.2, 0.24, 0.28, 0.32};
         for(double threshold : thresholds){
-            query(testStreamPath, testFilterMatchesPathPrefix, testFilterElaboratedMatchesPathPrefix,
-                    scoresPath, testEventsNum, threshold, null, false);
+            query(testStreamPath, testMatchesPathPrefix, testElaboratedMatchesPathPrefix,
+                    testFilterDetailsPathPrefix, scoresPath, testEventsNum, threshold, null, false);
         }
     }
 
-    private static void testMaximumK() throws FileNotFoundException {
+    private static void testMaximumK() throws IOException {
         int[] ks = new int[]{3, 4, 5, 6, 7, 8};
         //for(int k : ks){
-        query(testStreamPath, testFilterMatchesPathPrefix, testFilterElaboratedMatchesPathPrefix,
+        query(testStreamPath, testMatchesPathPrefix, testElaboratedMatchesPathPrefix, testFilterDetailsPathPrefix,
                 scoresPath, testEventsNum, 0.0, 7, false);
         //}
     }
 
-    private static void query(String inputPath, String outputPath, String elaboratedOutputPath, String scoresPath,
-                              int eventsNum, Double threshold, Integer k, boolean printMatches)
-            throws FileNotFoundException {
+    private static void query(String inputPath, String outputPath, String elaboratedOutputPath, String detailsPath,
+                              String scoresPath, int eventsNum, Double threshold, Integer k, boolean printMatches)
+            throws IOException {
         for (int count = 0; count < eventsNum; count++) {
             idToMatches.put(count, new LinkedList<>());
         }
@@ -124,16 +133,13 @@ public class Main {
         EPRuntime runtime = getEpRuntime();
 
         int sentEventsNum = 0;
-        try {
-            if(k != null){
-                sentEventsNum = sendEventsMaximumK(runtime, inputPath, scoresPath, threshold, k);
-            }
-            else {
-                sentEventsNum = sendEvents(runtime, inputPath, scoresPath, threshold);
-            }
-        }catch (IOException e){
-            e.printStackTrace();
+        if(k != null){
+            sentEventsNum = sendEventsMaximumK(runtime, inputPath, scoresPath, threshold, k);
         }
+        else {
+            sentEventsNum = sendEvents(runtime, inputPath, scoresPath, threshold);
+        }
+
 
         String kString = "_";
         String label = Double.toString(threshold);
@@ -143,30 +149,26 @@ public class Main {
         }
 
         String postfix  = "_threshold_" + threshold + kString + "_.txt";
-        outputPath = outputPath + postfix;
-        elaboratedOutputPath = elaboratedOutputPath + postfix;
-        String filterDetailsPath = testFilterDetailsPathPrefix + postfix;
-        PrintWriter filterDetails = new PrintWriter(filterDetailsPath);
-        filterDetails.println(label);
-        filterDetails.println(sentEventsNum);
-        filterDetails.println(matchesNum);
-        filterDetails.close();
+        CSVPrinter detailsPrinter = new CSVPrinter(new FileWriter(detailsPath + postfix), CSVFormat.DEFAULT);
+        detailsPrinter.printRecord(label);
+        detailsPrinter.printRecord(sentEventsNum);
+        detailsPrinter.printRecord(matchesNum);
+        detailsPrinter.close();
 
         if(printMatches) {
-            PrintWriter writer = new PrintWriter(outputPath);
-            PrintWriter elaboratedWriter = new PrintWriter(elaboratedOutputPath);
+            outputPath = outputPath + postfix;
+            elaboratedOutputPath = elaboratedOutputPath + postfix;
+            CSVPrinter writer = new CSVPrinter(new FileWriter(outputPath), CSVFormat.DEFAULT);
+            CSVPrinter elaboratedWriter = new CSVPrinter(new FileWriter(elaboratedOutputPath), CSVFormat.DEFAULT);
 
             for (int count = 0; count < eventsNum; count++) {
                 List<List<Integer>> matches = idToMatches.get(count);
-                writer.println(matches.size());
-                elaboratedWriter.print(matches.size());
+                writer.printRecord(matches.size());
+                elaboratedWriter.printRecord(matches.size());
+
                 for (List<Integer> match : matches) {
-                    elaboratedWriter.print("; ");
-                    for (int eventCount : match) {
-                        elaboratedWriter.print(eventCount + ", ");
-                    }
+                    elaboratedWriter.print(match);
                 }
-                elaboratedWriter.println("");
             }
             writer.close();
             elaboratedWriter.close();
@@ -191,7 +193,6 @@ public class Main {
             epCompiled = compiler.compile("@name('" + statementName + "') " + pattern, args);
         }
         catch (EPCompileException ex) {
-            // handle exception here
             throw new RuntimeException(ex);
         }
 
@@ -252,27 +253,28 @@ public class Main {
     }
 
     static int sendEvents(EPRuntime runtime, String inputPath, String scoresPath, double threshold) throws IOException {
-        BufferedReader reader;
-        BufferedReader scoresReader = null;
+        CSVParser eventsParser = CSVParser.parse(new FileReader(inputPath), CSVFormat.DEFAULT);
+
+        CSVParser scoresParser = null;
+        Iterator<CSVRecord> scores = null;
+
         int notSent = 0;
         int count = 0;
         Event dummyEvent = new Event("-1", -1, -1, -1);
-        reader = new BufferedReader(new FileReader(inputPath));
+
+        String score = null;
 
         if(scoresPath != null){
-            scoresReader = new BufferedReader(new FileReader(scoresPath));
-        }
-        String score = null;
-        if(scoresReader != null) {
-            score = scoresReader.readLine();
+            scoresParser = CSVParser.parse(new FileReader(scoresPath), CSVFormat.DEFAULT);
+            scores = scoresParser.iterator();
+            score = scores.next().get(0);
         }
 
-        Event event = getNextEvent(reader, count, count);
-        while (event != null) {
 
+        for(CSVRecord s : eventsParser) {
             Event eventForUse;
             if(score == null || eventFilter(Float.parseFloat(score), threshold)) {
-                eventForUse = event;
+                eventForUse = new Event(s.get(0), Double.parseDouble(s.get(1)), count, count);
             }
             else{
                 notSent += 1;
@@ -281,45 +283,48 @@ public class Main {
             runtime.getEventService().sendEventBean(eventForUse, "Event");
 
             count += 1;
+
             if(printProgress && (count % toPrint == 0)){
                 System.out.println(count);
             }
 
-            if(scoresReader != null) {
-                score = scoresReader.readLine();
+            if(scoresParser != null) {
+                score = scores.next().get(0);
             }
-            event = getNextEvent(reader, count, count);
         }
-        reader.close();
-        if(scoresReader != null){
-            scoresReader.close();
+        eventsParser.close();
+        if(scoresParser != null){
+            scoresParser.close();
         }
         return testEventsNum - notSent;
     }
 
     static int sendEventsMaximumK(EPRuntime runtime, String inputPath, String scoresPath, double threshold, int k)
             throws IOException{
-        BufferedReader reader;
-        BufferedReader scoresReader;
+        CSVParser eventsParser = CSVParser.parse(new FileReader(inputPath), CSVFormat.DEFAULT);
+        Iterator<CSVRecord> events = eventsParser.iterator();
+
+        CSVParser scoresParser = CSVParser.parse(new FileReader(scoresPath), CSVFormat.DEFAULT);
+        Iterator<CSVRecord> scores = scoresParser.iterator();
 
         Event dummyEvent = new Event("-1", -1, -1, -1);
-        List<Pair<Event, Float>> window = new LinkedList<>();
-        reader = new BufferedReader(new FileReader(inputPath));
-        scoresReader = new BufferedReader(new FileReader(scoresPath));
 
         int count = 0;
         int id = 0;
+
+        List<Pair<Event, Float>> window = new LinkedList<>();
         for (int i = 0; i < windowSize; i++) {
-            Event event = getNextEvent(reader, count, id);
-            String score = scoresReader.readLine();
+            CSVRecord s = events.next();
+            Event event = new Event(s.get(0), Double.parseDouble(s.get(1)), count, id);
+
+            String score = scores.next().get(0);
             window.add(new Pair<>(event, Float.parseFloat(score)));
 
             count += 1;
             id += 1;
         }
 
-        boolean done = false;
-        while (!done) {
+        while (events.hasNext()) {
             window.sort(Comparator.comparing(p -> p.b));
             Collections.reverse(window);
 
@@ -354,16 +359,12 @@ public class Main {
             window.sort(Comparator.comparing(p -> p.a.getCount()));
             window.remove(0);
 
-            Event event = getNextEvent(reader, count, id);
-            String score = scoresReader.readLine();
+            CSVRecord s = events.next();
 
-            if (event == null) {
-                done = true;
-            }
-            else {
-                window.add(new Pair<>(event, Float.parseFloat(score)));
-            }
+            String score = scores.next().get(0);
 
+            Event event = new Event(s.get(0), Double.parseDouble(s.get(1)), count, id);
+            window.add(new Pair<>(event, Float.parseFloat(score)));
 
             count += 2*windowSize;
             for (var p : window) {
@@ -377,19 +378,8 @@ public class Main {
             }
         }
 
-        reader.close();
-        scoresReader.close();
+        scoresParser.close();
+        eventsParser.close();
         return testEventsNum;
-    }
-
-    private static Event getNextEvent(BufferedReader reader, int count, int id) throws IOException {
-        String line = reader.readLine();
-        if(line != null) {
-            String[] s = line.split(",");
-            return new Event(s[0], Double.parseDouble(s[1]), count, id);
-        }
-        else{
-            return null;
-        }
     }
 }

@@ -1,6 +1,7 @@
 import processing_utilities
 import constants
 import random
+import pandas as pd
 
 
 def write_non_zero_rows(file_path):
@@ -16,23 +17,46 @@ def write_non_zero_rows(file_path):
     data_stream.close()
 
 
+# def build_sequences(is_test):
+#     file_path = constants.test_file_path if is_test else constants.train_file_path
+#     file_path_seqs = constants.test_file_path_sequences if is_test \
+#         else constants.train_file_path_sequences
+#     data_stream = open(file_path, 'r')
+#     seqs_file = open(file_path_seqs, 'w')
+#     events = [processing_utilities.get_event_from_str(line, *constants.event_format) for line in data_stream]
+#     window_size = constants.window_limit[0]
+#     for i in range(window_size - 1, len(events) - window_size):
+#         window = events[i - (window_size - 1):i + window_size]
+#         for event in window:
+#             seqs_file.write(str(event) + ";")
+#         seqs_file.write("\n")
+#         if i % 1000 == 0:
+#             print(i)
+#     data_stream.close()
+#     seqs_file.close()
+
+
 def build_sequences(is_test):
     file_path = constants.test_file_path if is_test else constants.train_file_path
     file_path_seqs = constants.test_file_path_sequences if is_test \
         else constants.train_file_path_sequences
-    data_stream = open(file_path, 'r')
-    seqs_file = open(file_path_seqs, 'w')
-    events = [processing_utilities.get_event_from_str(line, *constants.event_format) for line in data_stream]
+    data_stream = pd.read_csv(file_path, chunksize=1, header=None)
     window_size = constants.window_limit[0]
-    for i in range(window_size - 1, len(events) - window_size):
-        window = events[i - (window_size - 1):i + window_size]
-        for event in window:
-            seqs_file.write(str(event) + ";")
-        seqs_file.write("\n")
-        if i % 1000 == 0:
-            print(i)
-    data_stream.close()
-    seqs_file.close()
+    done = False
+    i = 0
+    while not done:
+        window = []
+        try:
+            for _ in range(window_size*2 - 1):
+                event = next(data_stream)
+                window = window + list(event.squeeze())
+            df = pd.DataFrame(window)
+            df = df.T
+            df.to_csv(file_path_seqs, index=False, header=False, mode='a')
+            if i % 1000 == 0:
+                print(i)
+        except StopIteration:
+            done = True
 
 
 def build_sequences_RNN(is_test):
@@ -95,25 +119,23 @@ def build_sequences_RNN(is_test):
 
 
 def build_data_stream():
-    def write_event(output_file, types, counter):
-        name = str(random.choice(types))
-        s_counter = str(counter)
-        s = name + "," + str(random.random()) + ", " + s_counter + "\n"
-        output_file.write(s)
-
-    train_output_file = open(constants.train_file_path, "w")
-    test_output_file = open(constants.test_file_path, "w")
     types = ['A', 'A', 'A', 'B', 'B', 'C', 'D']
-    counter = 0
-    for _ in range(constants.train_size):
-        write_event(train_output_file, types, counter)
-        counter += 1
-    counter = 0
-    for _ in range(constants.test_size):
-        write_event(test_output_file, types, counter)
-        counter += 1
-    train_output_file.close()
-    test_output_file.close()
+    chunk_size = 10**4
+    for size, path in zip([constants.train_size, constants.test_size], [constants.train_file_path, constants.test_size]):
+        done = False
+        counter = 0
+        while not done:
+            for _ in range(chunk_size):
+                if counter == size:
+                    done = True
+                    break
+                chunk = pd.DataFrame()
+                name = str(random.choice(types))
+                value = random.random()
+                s_counter = str(counter)
+                chunk.append(pd.Series(data=[name, value, s_counter]))
+                chunk.to_csv(path, index=False, header=False, mode='a')
+                counter += 1
 
 
 def build_data_stream_RNN(is_test):
