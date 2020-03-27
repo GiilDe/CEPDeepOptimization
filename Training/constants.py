@@ -41,3 +41,5 @@ device = torch.device(dev)
 
 test_size = 1000000
 train_size = 7913670
+
+type_to_vec = {'A': [0, 0, 0, 1], 'B': [0, 0, 1, 0], 'C': [0, 1, 0, 0], 'D': [1, 0, 0, 0], 0: [0, 0, 0, 0]}

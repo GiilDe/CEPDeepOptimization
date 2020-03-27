@@ -1,66 +1,56 @@
 import torch
 import constants
 from torch.autograd import Variable
-import processing_utilities
 import pandas as pd
 
 
-def getX(x_line):
-    x_temp = x_line.split(";")[:-1]
-    events = [processing_utilities.convert_event(processing_utilities.get_event_from_str(event, *constants.event_format))
-              for event in x_temp]
-    x = Variable(torch.stack(events), requires_grad=True).reshape(-1)
+def getX(row):
+    events = []
+    i = 0
+    while i < len(row):
+        type = constants.type_to_vec[row[i]]
+        events = events + type
+        events = events + list(row[i + 1:i + len(constants.event_format[0]) - 1])
+        i += len(constants.event_format[0])
+    x = Variable(torch.tensor(events), requires_grad=True)
     return x
 
 
-def get_batch(sequences, batch_size=32):
-    batch_x = []
-    finished = False
-    i = 0
-    while i < batch_size:
-        x_line = sequences.readline()
-        if x_line in constants.stop_lines:
-            finished = True
-            break
-        x = getX(x_line)
-        batch_x.append(x)
-        i += 1
-
-    batch_x = torch.stack(batch_x) if batch_x != [] else None
-    return batch_x, finished
+def get_batch(sequences):
+    try:
+        batch = next(sequences).to_numpy()
+        batch_x = []
+        for row in batch:
+            batch_x.append(getX(row))
+        batch_x = torch.stack(batch_x)
+        return batch_x
+    except StopIteration:
+        return None
 
 
-def get_sequence(sequences):
-    x_line = sequences.readline()
-    if x_line in constants.stop_lines:
-        return None, True
-    return getX(x_line), False
-
-
-def infer():
+def infer(batch_size=32):
     net = torch.load(constants.model_path)
     net.to(device=constants.device)
     net.eval()
-    sequences = open("training data/FOR_TEST_SEQS - Copy.txt", 'r')
-    df = pd.DataFrame()
+    sequences = pd.read_csv(constants.test_file_path_sequences, chunksize=batch_size, header=None)
+    scores = pd.DataFrame()
     for _ in range(constants.window_limit[0] - 1):
-        df = df.append(pd.Series(-1), ignore_index=True)
-    x, almost_finished = get_batch(sequences)
+        scores = scores.append(pd.Series(-1), ignore_index=True)
     i = 0
-    finished = False
-    while not finished and x is not None:
-        y_hat = net.forward(x)
+    x = get_batch(sequences)
+    while x is not None:
+        y_hat = net.forward(x).data.numpy().reshape(-1)
         for row in y_hat:
-            df = df.append(pd.Series(row.item()), ignore_index=True)
-        finished = almost_finished
-        x, almost_finished = get_batch(sequences)
+            scores = scores.append(pd.Series(row.item()), ignore_index=True)
         if i % 1000 == 0:
             print(i)
         i += 32
+        x = get_batch(sequences)
+
     for _ in range(constants.window_limit[0] - 1):
-        df = df.append(pd.Series(-1), ignore_index=True)
+        scores = scores.append(pd.Series(-1), ignore_index=True)
     sequences.close()
-    df.to_csv(constants.scores_path, index=False, header=False)
+    scores.to_csv(constants.scores_path, index=False, header=False)
 
 
 if __name__ == "__main__":

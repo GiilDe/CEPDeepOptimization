@@ -31,14 +31,16 @@ public class Main {
     final static String testElaboratedMatchesPath = "Application/output data/matches/test elaborated matches.txt";
     final static int testEventsNum = 1000000;
 
-    final static String testMatchesPathPrefix = "Application/output data/matches/test matches";
-    final static String testElaboratedMatchesPathPrefix = "Application/output data/matches/test elaborated matches";
+    final static String testMatchesPathPrefix = "Application/output data/matches/";
+    final static String testElaboratedMatchesPathPrefix = "Application/output data/matches/";
 
-    final static String testFilterDetailsPathPrefix = "Application/output data/details/threshold details/details";
+    final static String testThresholdDetailsPathPrefix = "Application/output data/details/threshold details/details";
+
+    final static String testMaximumKDetailsPathPrefix = "Application/output data/details/maximumk details/details";
 
     final static String patternPath = "Application/pattern";
 
-    final static Map<Integer, List<List<Integer>> > idToMatches = new HashMap<>();
+    final static Map< Integer, List<List<Integer>> > idToMatches = new HashMap<>();
     final static Set< Set<Integer> > matches = new HashSet<>();
 
     final static String statementName = "mystatement";
@@ -68,36 +70,31 @@ public class Main {
                     l.add(matchCounts);
                 }
             }
-            else {
-                System.err.println("Bad");
-                System.out.println("Bad");
-                System.out.println("Bad");
-                System.out.println("Bad");
-                System.out.println("Bad");
-                System.out.println("Bad");
-            }
         }
     };
 
 
     public static void main(String[] s) {
         try {
-            query(testStreamPath, testMatchesPathPrefix, testElaboratedMatchesPathPrefix, testFilterDetailsPathPrefix,
-                    scoresPath, testEventsNum, 0.2, null, true);
+            int[] ks = new int[]{5, 6, 7, 8};
+            for (int k : ks) {
+                query(testStreamPath, testMatchesPathPrefix, testElaboratedMatchesPathPrefix, testMaximumKDetailsPathPrefix,
+                        scoresPath, testEventsNum, 0.12, k, true);
+            }
         } catch (IOException ex){
             ex.printStackTrace();
         }
     }
 
     private static void queryTrainData() throws IOException {
-        query(trainStreamPath, trainMatchesPath, trainElaboratedMatchesPath, testFilterDetailsPathPrefix,
+        query(trainStreamPath, trainMatchesPath, trainElaboratedMatchesPath, testThresholdDetailsPathPrefix,
                 null, trainEventsNum, null, null, true);
     }
 
     private static void testThresholds() throws IOException {
         double threshold = 0.0;
         for (int i = 0; i < 10; i++) {
-            query(testStreamPath, testMatchesPathPrefix, testElaboratedMatchesPathPrefix, testFilterDetailsPathPrefix,
+            query(testStreamPath, testMatchesPathPrefix, testElaboratedMatchesPathPrefix, testThresholdDetailsPathPrefix,
                     scoresPath, testEventsNum, threshold, null, false);
             threshold += 0.12;
         }
@@ -107,14 +104,14 @@ public class Main {
         double[] thresholds = new double[]{0, 0.04, 0.08, 0.12, 0.16, 0.2, 0.24, 0.28, 0.32};
         for(double threshold : thresholds){
             query(testStreamPath, testMatchesPathPrefix, testElaboratedMatchesPathPrefix,
-                    testFilterDetailsPathPrefix, scoresPath, testEventsNum, threshold, null, false);
+                    testThresholdDetailsPathPrefix, scoresPath, testEventsNum, threshold, null, false);
         }
     }
 
     private static void testMaximumK() throws IOException {
         int[] ks = new int[]{3, 4, 5, 6, 7, 8};
         //for(int k : ks){
-        query(testStreamPath, testMatchesPathPrefix, testElaboratedMatchesPathPrefix, testFilterDetailsPathPrefix,
+        query(testStreamPath, testMatchesPathPrefix, testElaboratedMatchesPathPrefix, testThresholdDetailsPathPrefix,
                 scoresPath, testEventsNum, 0.0, 7, false);
         //}
     }
@@ -314,8 +311,8 @@ public class Main {
 
         List<Pair<Event, Float>> window = new LinkedList<>();
         for (int i = 0; i < windowSize; i++) {
-            CSVRecord s = events.next();
-            Event event = new Event(s.get(0), Double.parseDouble(s.get(1)), count, id);
+            CSVRecord e = events.next();
+            Event event = new Event(e.get(0), Double.parseDouble(e.get(1)), count, id);
 
             String score = scores.next().get(0);
             window.add(new Pair<>(event, Float.parseFloat(score)));
@@ -359,17 +356,17 @@ public class Main {
             window.sort(Comparator.comparing(p -> p.a.getCount()));
             window.remove(0);
 
-            CSVRecord s = events.next();
+            CSVRecord e = events.next();
 
             String score = scores.next().get(0);
 
-            Event event = new Event(s.get(0), Double.parseDouble(s.get(1)), count, id);
+            Event event = new Event(e.get(0), Double.parseDouble(e.get(1)), count, id);
             window.add(new Pair<>(event, Float.parseFloat(score)));
 
             count += 2*windowSize;
             for (var p : window) {
-                Event e = p.a;
-                e.setCount(e.getCount() + 2*windowSize - 1);
+                Event ev = p.a;
+                ev.setCount(ev.getCount() + 2*windowSize - 1);
             }
 
             id += 1;
