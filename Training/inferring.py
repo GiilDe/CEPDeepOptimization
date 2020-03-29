@@ -12,7 +12,7 @@ def getX(row):
         events = events + type
         events = events + list(row[i + 1:i + len(constants.event_format[0]) - 1])
         i += len(constants.event_format[0])
-    x = Variable(torch.tensor(events), requires_grad=True)
+    x = Variable(torch.tensor(events), requires_grad=False)
     return x
 
 
@@ -34,7 +34,7 @@ def infer(batch_size=32):
     net.eval()
     sequences = pd.read_csv(constants.test_file_path_sequences, chunksize=batch_size, header=None)
     scores = pd.DataFrame()
-    for _ in range(constants.window_limit[0] - 1):
+    for _ in range(constants.window_limit - 1):
         scores = scores.append(pd.Series(-1), ignore_index=True)
     i = 0
     x = get_batch(sequences)
@@ -47,7 +47,7 @@ def infer(batch_size=32):
         i += 32
         x = get_batch(sequences)
 
-    for _ in range(constants.window_limit[0] - 1):
+    for _ in range(constants.window_limit - 1):
         scores = scores.append(pd.Series(-1), ignore_index=True)
     sequences.close()
     scores.to_csv(constants.scores_path, index=False, header=False)

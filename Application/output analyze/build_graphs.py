@@ -153,8 +153,8 @@ def threshold_graphs():
     plt.title(title)
     plt.xlabel("complexity")
     plt.ylabel("matches found ratio")
-    plt.show()
     plt.savefig(graphs_path + title)
+    plt.show()
 
     return complexity, matches_found_ratio
 

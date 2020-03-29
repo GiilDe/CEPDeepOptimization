@@ -11,7 +11,7 @@ import numpy as np
 
 import constants
 import nets
-
+import processing_utilities
 
 loss_function_type = torch.nn.MSELoss
 
@@ -41,7 +41,8 @@ def getXY(x_line, y_line, normalize):
     events = [processing_utilities.convert_event(processing_utilities.get_event_from_str(event, *constants.event_format))
               for event in x_temp]
     x = Variable(torch.stack(events), requires_grad=True).reshape(-1)
-    y = Variable(torch.tensor([float(y_line.split("\n")[0])], device=constants.device))
+    y_str = y_line[1:].split(",")[0]
+    y = Variable(torch.tensor([float(y_str)], device=constants.device))
     if normalize:
         y = torch.tanh(y)
     return x, y
@@ -67,8 +68,8 @@ def net_train(epochs, batch_interval, batch_size, normalize=False, epoch_interva
         sequences = open(seqs_file, 'r')
         labels = open(labels_file, 'r')
         net.train()
-        batch_idx = 0
-        for _ in range(constants.window_limit[0]):
+        processed_events = 0
+        for _ in range(constants.window_limit):
             sequences.readline()
             labels.readline()
         x, y, almost_finished = get_batch(sequences, labels, batch_size, normalize)
@@ -81,10 +82,9 @@ def net_train(epochs, batch_interval, batch_size, normalize=False, epoch_interva
             optimizer.step()
             batch_loss = loss.data.item()
             current_epoch_losses.append(batch_loss)
-            if batch_idx % batch_interval == 0:
-                print('Train Epoch: {} \tBatch Loss: {:.6f}'.format(
-                    epoch, batch_loss))
-            batch_idx += 1
+            if processed_events % batch_interval == 0:
+                print("Epoch " + str(epoch) + ": Processed " + str(processed_events) + " out of " + str(constants.train_size))
+            processed_events += batch_size
             finished = almost_finished
             x, y, almost_finished = get_batch(sequences, labels, batch_size, normalize)
         sequences.close()
@@ -134,7 +134,7 @@ def net_test(net, batch_size, normalize=False, loss_per_label=False):
     epoch_losses = []
     sequences = open(constants.test_file_path_sequences, 'r')
     labels = open(constants.test_file_path_labels, 'r')
-    for _ in range(constants.window_limit[0]):
+    for _ in range(constants.window_limit):
         sequences.readline()
         labels.readline()
     last_predictions = open(constants.last_predictions_file_path, 'w')

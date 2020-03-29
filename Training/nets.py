@@ -6,7 +6,7 @@ import constants
 class FCNet(nn.Module):
     def __init__(self, normalize=False):
         super(FCNet, self).__init__()
-        self.fc1 = nn.Linear((constants.window_limit[0]*2-1)*5, 40)
+        self.fc1 = nn.Linear((constants.window_limit*2-1)*5, 40)
         self.b_norm1 = nn.BatchNorm1d(40)
         self.relu1 = nn.ReLU()
         self.drop1 = nn.Dropout()

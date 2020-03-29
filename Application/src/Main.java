@@ -1,7 +1,6 @@
 import com.espertech.esper.common.client.EPCompiled;
 import com.espertech.esper.common.client.EventBean;
 import com.espertech.esper.common.client.configuration.Configuration;
-import com.espertech.esper.common.internal.event.bean.core.BeanEventBean;
 import com.espertech.esper.common.internal.event.map.MapEventBean;
 import com.espertech.esper.compiler.client.CompilerArguments;
 import com.espertech.esper.compiler.client.EPCompileException;
@@ -13,8 +12,10 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.log4j.BasicConfigurator;
 
 import java.io.*;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 
 
@@ -22,17 +23,19 @@ public class Main {
     final static String scoresPath = "Data/scores.txt";
 
     final static String trainStreamPath = "Data/train data stream.txt";
-    final static String trainMatchesPath = "Application/output data/matches/train matches.txt";
-    final static String trainElaboratedMatchesPath = "Application/output data/matches/train elaborated matches.txt";
-    final static int trainEventsNum = 7913670;
+    final static String trainMatchesPath = "Application/output data/matches/train matches";
+    final static String trainElaboratedMatchesPath = "Application/output data/matches/train elaborated matches";
+    final static int trainEventsNum = 6077571;
 
     final static String testStreamPath = "Data/test data stream.txt";
-    final static String testMatchesPath = "Application/output data/matches/test matches.txt";
-    final static String testElaboratedMatchesPath = "Application/output data/matches/test elaborated matches.txt";
     final static int testEventsNum = 1000000;
 
-    final static String testMatchesPathPrefix = "Application/output data/matches/";
-    final static String testElaboratedMatchesPathPrefix = "Application/output data/matches/";
+    final static String testMatchesPathPrefix = "Application/output data/matches/test matches";
+    final static String testElaboratedMatchesPathPrefix = "Application/output data/matches/test elaborated matches";
+
+    final static String testDetailsPathPrefix = "Application/output data/details/test details";
+
+    final static String trainDetailsPathPrefix = "Application/output data/details/train details";
 
     final static String testThresholdDetailsPathPrefix = "Application/output data/details/threshold details/details";
 
@@ -49,46 +52,56 @@ public class Main {
     final static int windowSize = 8;
     static int matchesNum = 0;
 
+    static boolean printTime = true;
+    static int toPrintTime = 10000;
+
+    static boolean countMultipleMatchesOfSameEvents = true;
+
+    static int startIndex = 0;
+    static int endIndex = testEventsNum;
 
     public static UpdateListener listener = (newData, oldData, s, r) -> {
         for (EventBean match : newData) {
-            Map<String, Object> events = ((MapEventBean) match).getProperties();
-            List<Integer> matchCounts = getMatch(events);
-            final HashSet<Integer> matchCountsSet = new HashSet<>(matchCounts);
-            if (!matches.contains(matchCountsSet)) {
-                matches.add(matchCountsSet);
-                matchesNum += 1;
-
-                for (Object b : events.values()) {
-                    Event event;
-                    if (b instanceof BeanEventBean) {
-                        event = (Event) ((BeanEventBean) b).getUnderlying();
-                    } else {
-                        event = (Event) b;
-                    }
-                    List<List<Integer>> l = idToMatches.get(event.getId());
-                    l.add(matchCounts);
+            Map<String, Integer> events = (Map<String, Integer>)(Map<String, ?>)((MapEventBean) match).getProperties();
+            List<Integer> matchCounts = new LinkedList<>(events.values());
+            if(countMultipleMatchesOfSameEvents) {
+                processMatch(matchCounts);
+            } else {
+                final Set<Integer> matchCountsSet = new HashSet<>(matchCounts);
+                if (!matches.contains(matchCountsSet)) {
+                    matches.add(matchCountsSet);
+                    processMatch(matchCounts);
                 }
             }
         }
     };
 
+    private static void processMatch(List<Integer> matchCounts) {
+        matchesNum += 1;
+
+        for (Integer c : matchCounts) {
+            List<List<Integer>> l = idToMatches.get(c);
+            l.add(matchCounts);
+        }
+    }
 
     public static void main(String[] s) {
+        BasicConfigurator.configure();
         try {
-            int[] ks = new int[]{5, 6, 7, 8};
-            for (int k : ks) {
-                query(testStreamPath, testMatchesPathPrefix, testElaboratedMatchesPathPrefix, testMaximumKDetailsPathPrefix,
-                        scoresPath, testEventsNum, 0.12, k, true);
-            }
+            queryTestData();
         } catch (IOException ex){
             ex.printStackTrace();
         }
     }
 
     private static void queryTrainData() throws IOException {
-        query(trainStreamPath, trainMatchesPath, trainElaboratedMatchesPath, testThresholdDetailsPathPrefix,
+        query(trainStreamPath, trainMatchesPath, trainElaboratedMatchesPath, trainDetailsPathPrefix,
                 null, trainEventsNum, null, null, true);
+    }
+
+    private static void queryTestData() throws IOException {
+        query(testStreamPath, testMatchesPathPrefix, testElaboratedMatchesPathPrefix, testDetailsPathPrefix,
+                null, testEventsNum, null, null, true);
     }
 
     private static void testThresholds() throws IOException {
@@ -100,31 +113,27 @@ public class Main {
         }
     }
 
-    private static void testThresholdsNormalized() throws IOException {
-        double[] thresholds = new double[]{0, 0.04, 0.08, 0.12, 0.16, 0.2, 0.24, 0.28, 0.32};
-        for(double threshold : thresholds){
-            query(testStreamPath, testMatchesPathPrefix, testElaboratedMatchesPathPrefix,
-                    testThresholdDetailsPathPrefix, scoresPath, testEventsNum, threshold, null, false);
-        }
-    }
-
     private static void testMaximumK() throws IOException {
-        int[] ks = new int[]{3, 4, 5, 6, 7, 8};
-        //for(int k : ks){
-        query(testStreamPath, testMatchesPathPrefix, testElaboratedMatchesPathPrefix, testThresholdDetailsPathPrefix,
-                scoresPath, testEventsNum, 0.0, 7, false);
-        //}
+        final var threshold = 0.12;
+        int[] ks = new int[]{5, 6, 7, 8};
+        for (int k : ks) {
+            query(testStreamPath, testMatchesPathPrefix, testElaboratedMatchesPathPrefix, testMaximumKDetailsPathPrefix,
+                    scoresPath, testEventsNum, threshold, k, true);
+        }
     }
 
     private static void query(String inputPath, String outputPath, String elaboratedOutputPath, String detailsPath,
                               String scoresPath, int eventsNum, Double threshold, Integer k, boolean printMatches)
             throws IOException {
-        for (int count = 0; count < eventsNum; count++) {
+
+        for (int count = startIndex; count < endIndex; count++) {
             idToMatches.put(count, new LinkedList<>());
         }
 
+        boolean printThreshold = true;
         if(threshold == null){
             threshold = (double) 0;
+            printThreshold = false;
         }
 
         EPRuntime runtime = getEpRuntime();
@@ -145,27 +154,56 @@ public class Main {
             label = Integer.toString(k);
         }
 
-        String postfix  = "_threshold_" + threshold + kString + "_.txt";
-        CSVPrinter detailsPrinter = new CSVPrinter(new FileWriter(detailsPath + postfix), CSVFormat.DEFAULT);
+        var s = "";
+        if(printThreshold) {
+            s = "_threshold_" + threshold;
+        }
+
+        if(k == null && !printThreshold){
+            kString = "";
+        }
+
+        String postfix  = s + kString + ".txt";
+        CSVPrinter detailsPrinter;
+        if(startIndex != 0){
+            detailsPrinter = new CSVPrinter(new FileWriter(detailsPath + postfix, true), CSVFormat.DEFAULT);
+        } else {
+            detailsPrinter = new CSVPrinter(new FileWriter(detailsPath + postfix), CSVFormat.DEFAULT);
+        }
         detailsPrinter.printRecord(label);
         detailsPrinter.printRecord(sentEventsNum);
         detailsPrinter.printRecord(matchesNum);
         detailsPrinter.close();
 
+        System.out.println();
+        System.out.println(label);
+        System.out.println(sentEventsNum);
+        System.out.println(matchesNum);
+
         if(printMatches) {
             outputPath = outputPath + postfix;
             elaboratedOutputPath = elaboratedOutputPath + postfix;
-            CSVPrinter writer = new CSVPrinter(new FileWriter(outputPath), CSVFormat.DEFAULT);
-            CSVPrinter elaboratedWriter = new CSVPrinter(new FileWriter(elaboratedOutputPath), CSVFormat.DEFAULT);
+            CSVPrinter writer;
+            CSVPrinter elaboratedWriter;
+            if(startIndex != 0){
+                writer = new CSVPrinter(new FileWriter(outputPath, true), CSVFormat.DEFAULT);
+                elaboratedWriter = new CSVPrinter(new FileWriter(elaboratedOutputPath, true), CSVFormat.DEFAULT);
+            } else {
+                writer = new CSVPrinter(new FileWriter(outputPath), CSVFormat.DEFAULT);
+                elaboratedWriter = new CSVPrinter(new FileWriter(elaboratedOutputPath), CSVFormat.DEFAULT);
+            }
 
-            for (int count = 0; count < eventsNum; count++) {
+
+            for (int count = startIndex; count < endIndex; count++) {
                 List<List<Integer>> matches = idToMatches.get(count);
-                writer.printRecord(matches.size());
-                elaboratedWriter.printRecord(matches.size());
+                writer.print(matches.size() + ", " + count);
+                writer.println();
+                elaboratedWriter.print(matches.size() + " ; ");
 
                 for (List<Integer> match : matches) {
-                    elaboratedWriter.print(match);
+                    elaboratedWriter.print(match + " ; ");
                 }
+                elaboratedWriter.println();
             }
             writer.close();
             elaboratedWriter.close();
@@ -199,7 +237,6 @@ public class Main {
             deployment = runtime.getDeploymentService().deploy(epCompiled);
         }
         catch (EPDeployException ex) {
-            // handle exception here
             throw new RuntimeException(ex);
         }
 
@@ -208,21 +245,6 @@ public class Main {
 
         statement.addListener(listener);
         return runtime;
-    }
-
-    private static List<Integer> getMatch(Map<String, Object> events) {
-        List<Integer> counts = new LinkedList<>();
-        for (Object b : events.values()) {
-            Event event;
-            if(b instanceof BeanEventBean){
-                event = (Event) ((BeanEventBean) b).getUnderlying();
-            }
-            else {
-                event = (Event) b;
-            }
-            counts.add(event.getId());
-        }
-        return counts;
     }
 
     private static String getPattern() {
@@ -234,7 +256,6 @@ public class Main {
             pattern.append(firstLine);
             String line = reader.readLine();
             while (line != null && !line.contentEquals("done")) {
-                // read next line
                 pattern.append(" ").append(line);
                 line = reader.readLine();
             }
@@ -256,7 +277,6 @@ public class Main {
         Iterator<CSVRecord> scores = null;
 
         int notSent = 0;
-        int count = 0;
         Event dummyEvent = new Event("-1", -1, -1, -1);
 
         String score = null;
@@ -267,8 +287,19 @@ public class Main {
             score = scores.next().get(0);
         }
 
+        long startTime = System.currentTimeMillis();
 
-        for(CSVRecord s : eventsParser) {
+        Iterator<CSVRecord> events = eventsParser.iterator();
+
+        for (int i = 0; i < startIndex; i++) {
+            events.next();
+        }
+
+        int count = startIndex;
+
+        while(events.hasNext()) {
+            CSVRecord s = events.next();
+
             Event eventForUse;
             if(score == null || eventFilter(Float.parseFloat(score), threshold)) {
                 eventForUse = new Event(s.get(0), Double.parseDouble(s.get(1)), count, count);
@@ -285,10 +316,24 @@ public class Main {
                 System.out.println(count);
             }
 
+            if(printTime && (count % toPrintTime == 0)){
+                long currentTime = System.currentTimeMillis();
+                double secPassed = (currentTime - startTime)/1000;
+                double minPassed = secPassed/60;
+                System.out.println("Time passed: " + secPassed + " secs");
+                System.out.println("Time passed: " + minPassed + " mins");
+                System.out.println("Current matches num: " + matchesNum);
+            }
+
             if(scoresParser != null) {
                 score = scores.next().get(0);
             }
+
+            if(count == endIndex){
+                break;
+            }
         }
+
         eventsParser.close();
         if(scoresParser != null){
             scoresParser.close();
