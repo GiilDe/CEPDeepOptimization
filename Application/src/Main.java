@@ -15,7 +15,6 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.log4j.BasicConfigurator;
 
 import java.io.*;
-import java.nio.file.StandardOpenOption;
 import java.util.*;
 
 
@@ -60,6 +59,10 @@ public class Main {
     static int startIndex = 0;
     static int endIndex = testEventsNum;
 
+    static EPRuntime runtime;
+
+    static int currentMatches;
+
     public static UpdateListener listener = (newData, oldData, s, r) -> {
         for (EventBean match : newData) {
             Map<String, Integer> events = (Map<String, Integer>)(Map<String, ?>)((MapEventBean) match).getProperties();
@@ -85,10 +88,14 @@ public class Main {
         }
     }
 
+    public static UpdateListener listenerForBestSubsets = (newData, oldData, s, r) -> currentMatches += newData.length;
+
+
     public static void main(String[] s) {
         BasicConfigurator.configure();
         try {
-            queryTestData();
+            final var outputPath = "Application/output_data/best subsets train.txt";
+            optimalSubsets(trainStreamPath, outputPath);
         } catch (IOException ex){
             ex.printStackTrace();
         }
@@ -136,14 +143,14 @@ public class Main {
             printThreshold = false;
         }
 
-        EPRuntime runtime = getEpRuntime();
+        runtime = getEpRuntime(listener);
 
         int sentEventsNum = 0;
         if(k != null){
-            sentEventsNum = sendEventsMaximumK(runtime, inputPath, scoresPath, threshold, k);
+            sentEventsNum = sendEventsMaximumK(inputPath, scoresPath, threshold, k);
         }
         else {
-            sentEventsNum = sendEvents(runtime, inputPath, scoresPath, threshold);
+            sentEventsNum = sendEvents(inputPath, scoresPath, threshold);
         }
 
 
@@ -215,7 +222,7 @@ public class Main {
         System.out.println("Done");
     }
 
-    private static EPRuntime getEpRuntime() {
+    private static EPRuntime getEpRuntime(UpdateListener l) {
         EPCompiler compiler = EPCompilerProvider.getCompiler();
         Configuration configuration = new Configuration();
         configuration.getCommon().addEventType(Event.class);
@@ -243,7 +250,7 @@ public class Main {
         EPStatement statement =
                 runtime.getDeploymentService().getStatement(deployment.getDeploymentId(), statementName);
 
-        statement.addListener(listener);
+        statement.addListener(l);
         return runtime;
     }
 
@@ -270,7 +277,7 @@ public class Main {
         return score >= threshold || score == -1;
     }
 
-    static int sendEvents(EPRuntime runtime, String inputPath, String scoresPath, double threshold) throws IOException {
+    static int sendEvents(String inputPath, String scoresPath, double threshold) throws IOException {
         CSVParser eventsParser = CSVParser.parse(new FileReader(inputPath), CSVFormat.DEFAULT);
 
         CSVParser scoresParser = null;
@@ -304,7 +311,7 @@ public class Main {
             if(score == null || eventFilter(Float.parseFloat(score), threshold)) {
                 eventForUse = new Event(s.get(0), Double.parseDouble(s.get(1)), count, count);
             }
-            else{
+            else {
                 notSent += 1;
                 eventForUse = dummyEvent;
             }
@@ -325,12 +332,12 @@ public class Main {
                 System.out.println("Current matches num: " + matchesNum);
             }
 
-            if(scoresParser != null) {
-                score = scores.next().get(0);
-            }
-
             if(count == endIndex){
                 break;
+            }
+
+            if(scoresParser != null) {
+                score = scores.next().get(0);
             }
         }
 
@@ -341,8 +348,9 @@ public class Main {
         return testEventsNum - notSent;
     }
 
-    static int sendEventsMaximumK(EPRuntime runtime, String inputPath, String scoresPath, double threshold, int k)
+    static int sendEventsMaximumK(String inputPath, String scoresPath, double threshold, int k)
             throws IOException{
+
         CSVParser eventsParser = CSVParser.parse(new FileReader(inputPath), CSVFormat.DEFAULT);
         Iterator<CSVRecord> events = eventsParser.iterator();
 
@@ -367,52 +375,18 @@ public class Main {
         }
 
         while (events.hasNext()) {
-            window.sort(Comparator.comparing(p -> p.b));
-            Collections.reverse(window);
+            sendBestK(threshold, k, dummyEvent, window);
+            count = createPartition(dummyEvent, count, window);
 
-            var iterator = window.listIterator();
-            List<Pair<Event, Float>> topK = new LinkedList<>();
-            for (int j = 0; j < k; j++) {
-                final var next = iterator.next();
-                topK.add(next);
-            }
-
-            topK.sort(Comparator.comparing(p -> p.a.getCount()));
-            var iterator2 = topK.listIterator();
-
-            for (int j = 0; j < k; j++) {
-                final var next = iterator2.next();
-                Event event = next.a;
-                Float score = next.b;
-                Event eventForUse;
-                if(eventFilter(score, threshold)) {
-                    eventForUse = event;
-                }
-                else {
-                    eventForUse = dummyEvent;
-                }
-                runtime.getEventService().sendEventBean(eventForUse, "Event");
-            }
-
-            for (int i = 0; i < windowSize; i++) {
-                runtime.getEventService().sendEventBean(dummyEvent, "Event");
-            }
-
-            window.sort(Comparator.comparing(p -> p.a.getCount()));
             window.remove(0);
 
-            CSVRecord e = events.next();
+            count += 1;
 
+            CSVRecord e = events.next();
             String score = scores.next().get(0);
 
             Event event = new Event(e.get(0), Double.parseDouble(e.get(1)), count, id);
             window.add(new Pair<>(event, Float.parseFloat(score)));
-
-            count += 2*windowSize;
-            for (var p : window) {
-                Event ev = p.a;
-                ev.setCount(ev.getCount() + 2*windowSize - 1);
-            }
 
             id += 1;
             if(printProgress && (id % toPrint == 0)){
@@ -423,5 +397,151 @@ public class Main {
         scoresParser.close();
         eventsParser.close();
         return testEventsNum;
+    }
+
+    private static void sendBestK(double threshold, Integer k, Event dummyEvent, List<Pair<Event, Float>> window) {
+        window.sort(Comparator.comparing(p -> p.b)); //sort by score
+        Collections.reverse(window);
+
+        var iterator = window.listIterator();
+        List<Pair<Event, Float>> topK = new LinkedList<>();
+        for (int j = 0; j < k; j++) {
+            final var next = iterator.next();
+            topK.add(next);
+        }
+
+        topK.sort(Comparator.comparing(p -> p.a.getCount()));
+        var iterator2 = topK.listIterator();
+
+        for (int j = 0; j < k; j++) {
+            final var next = iterator2.next();
+            Event event = next.a;
+            Float score = next.b;
+            Event eventForUse;
+            if (eventFilter(score, threshold)) {
+                eventForUse = event;
+            } else {
+                eventForUse = dummyEvent;
+            }
+            runtime.getEventService().sendEventBean(eventForUse, "Event");
+        }
+
+        window.sort(Comparator.comparing(p -> p.a.getCount()));
+    }
+
+    public static <T> ArrayList<List<T>> getSubsets(List<T> s) {
+        ArrayList<T> set = new ArrayList<>(s);
+        ArrayList<List<T>> allsubsets =
+                new ArrayList<List<T>>();
+        int max = 1 << set.size();
+        for (int i = 0; i < max; i++) {
+            ArrayList<T> subset = new ArrayList<T>();
+            for (int j = 0; j < set.size(); j++) {
+                if (((i >> j) & 1) == 1) {
+                    subset.add(set.get(j));
+                }
+            }
+            allsubsets.add(new LinkedList<>(subset));
+        }
+        return allsubsets;
+    }
+
+    static void optimalSubsets(String inputPath, String outputPath)
+            throws IOException{
+        CSVParser eventsParser = CSVParser.parse(new FileReader(inputPath), CSVFormat.DEFAULT);
+        Iterator<CSVRecord> events = eventsParser.iterator();
+
+        CSVPrinter printer = new CSVPrinter(new FileWriter(outputPath, false), CSVFormat.DEFAULT);
+
+        runtime = getEpRuntime(listenerForBestSubsets);
+
+        Event dummyEvent = new Event("-1", -1, -1, -1);
+
+        int count = 0;
+        int id = 0;
+
+        long startTime = System.currentTimeMillis();
+        long lastTime = startTime;
+
+        List<Event> window = new LinkedList<>();
+        for (int i = 0; i < windowSize; i++) {
+            CSVRecord e = events.next();
+            Event event = new Event(e.get(0), Double.parseDouble(e.get(1)), count, id);
+
+            window.add(event);
+
+            count += 1;
+            id += 1;
+        }
+
+        while (events.hasNext()) {
+            ArrayList< List<Event> > subsets = getSubsets(window);
+            ArrayList<Integer> bestSubsetsMatches = new ArrayList<>(Collections.nCopies(windowSize, 0));
+
+            for (var subset : subsets) {
+                int k = subset.size() - 1;
+                if(k == -1){
+                    continue;
+                }
+
+                currentMatches = 0;
+
+                for (Event e : subset) {
+                    runtime.getEventService().sendEventBean(e, "Event");
+                }
+
+                for (int i = 0; i < windowSize; i++) {
+                    runtime.getEventService().sendEventBean(dummyEvent, "Event");
+                }
+
+                if(currentMatches > bestSubsetsMatches.get(k)){
+                    bestSubsetsMatches.set(k, currentMatches);
+                }
+            }
+
+            printer.printRecord(bestSubsetsMatches);
+
+            window.remove(0);
+
+            CSVRecord e = events.next();
+
+            Event event = new Event(e.get(0), Double.parseDouble(e.get(1)), count, id);
+            window.add(event);
+
+            count += 1;
+            id += 1;
+            if(printProgress && (id % toPrint == 0)){
+                System.out.println(id);
+            }
+
+            if(printTime && (count % toPrintTime == 0)){
+                long currentTime = System.currentTimeMillis();
+                long secPassed = (currentTime - startTime)/1000;
+                double minPassed = secPassed/60;
+                long thisWindowTime = (currentTime - lastTime)/1000;
+                System.out.println("Time passed: " + secPassed + " secs");
+                System.out.println("Time passed: " + minPassed + " mins");
+                System.out.println("This window's time: " + thisWindowTime);
+                lastTime = currentTime;
+            }
+        }
+
+        printer.close();
+        eventsParser.close();
+    }
+
+    private static int createPartition(Event dummyEvent, int count, List<Pair<Event, Float>> window) {
+        for (int i = 0; i < windowSize; i++) {
+            runtime.getEventService().sendEventBean(dummyEvent, "Event");
+        }
+
+        int jumpSize = 2*windowSize - 1;
+        count += jumpSize;
+
+        for (var p : window) {
+            Event ev = p.a;
+            ev.setCount(ev.getCount() + jumpSize);
+        }
+        return count;
     }
 }

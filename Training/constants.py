@@ -1,6 +1,6 @@
 import torch
 
-model_path = "training data/FCnet"
+model_path = "training data/FCnet_15"
 last_predictions_file_path = "training data/last predictions.txt"
 scores_path = "../Data/scores.txt"
 
@@ -8,7 +8,7 @@ train_file_path = "../Data/train data stream.txt"
 test_file_path = "../Data/test data stream.txt"
 
 
-train_file_path_labels = "training data/FOR_TRAIN_LABELS.txt"
+train_labels_path = "training data/FOR_TRAIN_LABELS.txt"
 train_file_path_sequences = "training data/FOR_TRAIN_SEQS_8.txt"
 
 test_file_path_labels = "training data/FOR_TEST_LABELS.txt"
@@ -18,6 +18,10 @@ training_report_path = "training data/report.txt"
 
 event_format = ['type', 'value', 'counter'], 2, 0
 window_limit = 8
+
+
+bestsubset_train_labels = "training data/best subsets train.txt"
+bestsubset_test_labels = "training data/best subsets test.txt"
 
 
 stop_lines = {"$", "$\n", " ", "\n", "", "-1", "-1\n"}

@@ -1,5 +1,3 @@
-import pickle
-
 import scipy.stats as stats
 import sklearn.metrics as metrics
 import torch
@@ -26,7 +24,7 @@ def get_batch(sequences, labels, batch_size, normalize):
         if x_line in constants.stop_lines:
             finished = True
             break
-        x, y = getXY(x_line, y_line, normalize)
+        x, y = get_xy(x_line, y_line, normalize)
         batch_x.append(x)
         batch_y.append(y)
         i += 1
@@ -36,16 +34,25 @@ def get_batch(sequences, labels, batch_size, normalize):
     return batch_x, batch_y, finished
 
 
-def getXY(x_line, y_line, normalize):
-    x_temp = x_line.split(";")[:-1]
-    events = [processing_utilities.convert_event(processing_utilities.get_event_from_str(event, *constants.event_format))
-              for event in x_temp]
-    x = Variable(torch.stack(events), requires_grad=True).reshape(-1)
+def get_xy(x_line, y_line, normalize):
+    x = get_x(x_line)
+    y = get_y(normalize, y_line)
+    return x, y
+
+
+def get_y(normalize, y_line):
     y_str = y_line[1:].split(",")[0]
     y = Variable(torch.tensor([float(y_str)], device=constants.device))
     if normalize:
         y = torch.tanh(y)
-    return x, y
+    return y
+
+
+def get_x(x_line):
+    x_temp = x_line.split(";")[:-1]
+    events = [processing_utilities.convert_event(processing_utilities.get_event_from_str(event, *constants.event_format)) for event in x_temp]
+    x = Variable(torch.stack(events), requires_grad=True).reshape(-1)
+    return x
 
 
 def net_train(epochs, batch_interval, batch_size, normalize=False, epoch_interval=1):
@@ -61,7 +68,7 @@ def net_train(epochs, batch_interval, batch_size, normalize=False, epoch_interva
     epochs_test_mutual_infos = []
 
     seqs_file = constants.train_file_path_sequences
-    labels_file = constants.train_file_path_labels
+    labels_file = constants.train_labels_path
     report_file = open(constants.training_report_path, 'w')
     for epoch in range(epochs):
         current_epoch_losses = []
@@ -105,27 +112,6 @@ def net_train(epochs, batch_interval, batch_size, normalize=False, epoch_interva
             report_file.write(test_losses + "\n")
             report_file.write(pearson_corr + "\n")
         torch.save(net, constants.model_path + "_" + str(epoch))
-
-
-def dump_lengthes():
-    y_to_quantity = dict()
-    labels = open(constants.test_file_path_labels, 'r')
-    for line in labels:
-        _, y = getXY("1;", line)
-        y = y.item()
-        if y not in y_to_quantity:
-            y_to_quantity[y] = 1
-        else:
-            y_to_quantity[y] += 1
-
-    m = sorted(y_to_quantity.values())[6]
-    all_quantity = 0
-    for value in y_to_quantity.values():
-        all_quantity += value
-    y_to_quantity['all_quantity'] = all_quantity
-    y_to_quantity['min_quantity'] = m
-
-    pickle.dump(y_to_quantity, open('y_to_quantity.obj', 'wb'))
 
 
 def net_test(net, batch_size, normalize=False, loss_per_label=False):

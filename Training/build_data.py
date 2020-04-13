@@ -56,4 +56,4 @@ def build_data_stream():
 
 
 if __name__ == "__main__":
-    old_build_sequences(False)
+    build_sequences(False)

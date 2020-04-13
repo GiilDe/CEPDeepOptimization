@@ -3,6 +3,32 @@ import torch.nn as nn
 import constants
 
 
+class FCNetBestSubset(nn.Module):
+    def __init__(self):
+        super(FCNetBestSubset, self).__init__()
+        self.fc1 = nn.Linear(constants.window_limit*5, 30)
+        self.b_norm1 = nn.BatchNorm1d(30)
+        self.relu1 = nn.ReLU()
+        self.drop1 = nn.Dropout()
+        self.fc2 = nn.Linear(30, 25)
+        self.b_norm2 = nn.BatchNorm1d(25)
+        self.relu2 = nn.ReLU()
+        self.drop2 = nn.Dropout()
+        self.fc3 = nn.Linear(25, 15)
+        self.b_norm3 = nn.BatchNorm1d(15)
+        self.relu3 = nn.ReLU()
+        self.drop3 = nn.Dropout()
+        self.fc4 = nn.Linear(15, constants.window_limit)
+        self.relu4 = nn.ReLU()
+        self.modules = [self.fc1, self.b_norm1, self.relu1, self.fc2, self.b_norm2, self.relu2,
+                        self.fc3, self.b_norm3, self.relu3, self.fc4, self.relu4]
+
+    def forward(self, x):
+        for module in self.modules:
+            x = module(x)
+        return x
+
+
 class FCNet(nn.Module):
     def __init__(self, normalize=False):
         super(FCNet, self).__init__()
