@@ -19,9 +19,8 @@ class FCNetBestSubset(nn.Module):
         self.relu3 = nn.ReLU()
         self.drop3 = nn.Dropout()
         self.fc4 = nn.Linear(15, constants.window_limit)
-        self.relu4 = nn.ReLU()
         self.modules = [self.fc1, self.b_norm1, self.relu1, self.fc2, self.b_norm2, self.relu2,
-                        self.fc3, self.b_norm3, self.relu3, self.fc4, self.relu4]
+                        self.fc3, self.b_norm3, self.relu3, self.fc4]
 
     def forward(self, x):
         for module in self.modules:

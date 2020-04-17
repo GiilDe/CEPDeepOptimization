@@ -22,21 +22,26 @@ def get_x(events):
 
 
 previous_leftover_x = None
+x_start_count = 0
+x_end_count = 0
 
 
 def get_batch_x(X):
-    global previous_leftover_x
+    global previous_leftover_x, x_start_count, x_end_count
     try:
         next_x = next(X)
         next_x.iloc[:, 0] = next_x.iloc[:, 0].apply(lambda x: constants.type_to_vec[x])
         batch = pd.concat([previous_leftover_x, next_x]) if previous_leftover_x is not None else next_x
         batch_x = []
         end_index = len(batch) - constants.window_limit
+        x_start_count = batch.index[0]
+        x_end_count = batch.index[end_index]
         for i in range(0, end_index):
             events = batch.iloc[i:i + constants.window_limit]
             batch_x.append(get_x(events))
         batch_x = torch.stack(batch_x)
         previous_leftover_x = batch.iloc[end_index:]
+
         return batch_x
     except StopIteration:
         previous_leftover_x = None
@@ -47,13 +52,17 @@ previous_leftover_y = None
 
 
 def get_batch_y(Y):
-    global previous_leftover_y
+    global previous_leftover_y, x_start_count, x_end_count
     try:
         next_y = next(Y)
         batch = pd.concat([previous_leftover_y, next_y]) if previous_leftover_y is not None else next_y
         end_index = len(batch) - constants.window_limit
         batch_y = torch.tensor(batch.iloc[:end_index].to_numpy(), dtype=torch.float)
         previous_leftover_y = batch.iloc[end_index:]
+        y_start_count = batch.index[0]
+        y_end_count = batch.index[end_index]
+        if y_start_count != x_start_count or y_end_count != x_end_count:
+            logging.error("x,y indices not compatible")
         return batch_y
     except StopIteration:
         previous_leftover_y = None
@@ -79,12 +88,13 @@ def net_train(epochs, batch_interval, batch_size, epoch_interval=1):
         current_epoch_losses = []
         X = pd.read_csv(constants.train_file_path, chunksize=batch_size, header=None, usecols=[0, 1])
         Y = pd.read_csv(constants.bestsubset_train_labels, chunksize=batch_size, header=None)
-        global previous_leftover_y
+        global previous_leftover_x, previous_leftover_y
+        previous_leftover_x = None
         previous_leftover_y = None
         net.train()
         processed_events = 0
         x, y = get_batch(X, Y)
-        while x is not None:
+        while x is not None and y is not None:
             if x.shape[0] == y.shape[0]:
                 optimizer.zero_grad()
                 y_hat = net.forward(x)
@@ -115,7 +125,8 @@ def net_train(epochs, batch_interval, batch_size, epoch_interval=1):
 
 
 def net_test(net, batch_size):
-    global previous_leftover_y
+    global previous_leftover_x, previous_leftover_y
+    previous_leftover_x = None
     previous_leftover_y = None
     criterion = loss_function_type()
     criterion.to(device=constants.device)
@@ -129,7 +140,7 @@ def net_test(net, batch_size):
     i = 0
     with torch.no_grad():
         x, y = get_batch(X, Y)
-        while x is not None:
+        while x is not None and y is not None:
             if x.shape[0] == y.shape[0]:
                 y_hat = net.forward(x)
                 loss = criterion(y_hat, y)
