@@ -18,7 +18,7 @@ class FCNetBestSubset(nn.Module):
         self.b_norm3 = nn.BatchNorm1d(15)
         self.relu3 = nn.ReLU()
         self.drop3 = nn.Dropout()
-        self.fc4 = nn.Linear(15, constants.window_limit)
+        self.fc4 = nn.Linear(15, 1)
         self.modules = [self.fc1, self.b_norm1, self.relu1, self.fc2, self.b_norm2, self.relu2,
                         self.fc3, self.b_norm3, self.relu3, self.fc4]
 

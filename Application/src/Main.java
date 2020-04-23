@@ -13,7 +13,6 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.log4j.BasicConfigurator;
-
 import java.io.*;
 import java.util.*;
 
@@ -62,6 +61,9 @@ public class Main {
     static EPRuntime runtime;
 
     static int currentMatches;
+    static int leadingEventCount;
+
+    final static int patternSize = 5;
 
     public static UpdateListener listener = (newData, oldData, s, r) -> {
         for (EventBean match : newData) {
@@ -88,14 +90,24 @@ public class Main {
         }
     }
 
-    public static UpdateListener listenerForBestSubsets = (newData, oldData, s, r) -> currentMatches += newData.length;
+    public static UpdateListener listenerForBestSubsets = (newData, oldData, s, r) -> {
+        for(var match : newData){
+            if(((MapEventBean)match).getProperties().containsValue(leadingEventCount)){
+                currentMatches += 1;
+            }
+        }
+    };
 
 
     public static void main(String[] s) {
         BasicConfigurator.configure();
         try {
-            final var outputPath = "Application/output_data/best subsets train.txt";
-            optimalSubsets(trainStreamPath, outputPath);
+//            var matchesOutputPath = "Application/output_data/BestSubsetsScores TEST.txt";
+//            var subsetsOutputPath = "Application/output_data/BestSubsets TEST.txt";
+//            optimalSubsets(testStreamPath, matchesOutputPath, subsetsOutputPath);
+            var matchesOutputPath = "Application/output_data/BestSubsetsScores TRAIN.txt";
+            var subsetsOutputPath = "Application/output_data/BestSubsets TRAIN.txt";
+            optimalSubsets(trainStreamPath, matchesOutputPath, subsetsOutputPath);
         } catch (IOException ex){
             ex.printStackTrace();
         }
@@ -429,10 +441,9 @@ public class Main {
         window.sort(Comparator.comparing(p -> p.a.getCount()));
     }
 
-    public static <T> ArrayList<List<T>> getSubsets(List<T> s) {
+    public static <T> ArrayList< ArrayList<T> > getSubsets(List<T> s) {
         ArrayList<T> set = new ArrayList<>(s);
-        ArrayList<List<T>> allsubsets =
-                new ArrayList<List<T>>();
+        ArrayList< ArrayList<T> > allSubsets = new ArrayList<>();
         int max = 1 << set.size();
         for (int i = 0; i < max; i++) {
             ArrayList<T> subset = new ArrayList<T>();
@@ -441,17 +452,19 @@ public class Main {
                     subset.add(set.get(j));
                 }
             }
-            allsubsets.add(new LinkedList<>(subset));
+            allSubsets.add(subset);
         }
-        return allsubsets;
+
+        return allSubsets;
     }
 
-    static void optimalSubsets(String inputPath, String outputPath)
+    static void optimalSubsets(String inputPath, String matchesOutputPath, String subsetsOutputPath)
             throws IOException{
         CSVParser eventsParser = CSVParser.parse(new FileReader(inputPath), CSVFormat.DEFAULT);
         Iterator<CSVRecord> events = eventsParser.iterator();
 
-        CSVPrinter printer = new CSVPrinter(new FileWriter(outputPath, false), CSVFormat.DEFAULT);
+        CSVPrinter matchesPrinter = new CSVPrinter(new FileWriter(matchesOutputPath, false), CSVFormat.DEFAULT);
+        CSVPrinter subsetsPrinter = new CSVPrinter(new FileWriter(subsetsOutputPath, false), CSVFormat.DEFAULT);
 
         runtime = getEpRuntime(listenerForBestSubsets);
 
@@ -474,13 +487,25 @@ public class Main {
             id += 1;
         }
 
+        leadingEventCount = window.get(windowSize - 1).getCount();
+
+        ArrayList< ArrayList<Event> > subsets = getSubsets(window);
+
         while (events.hasNext()) {
-            ArrayList< List<Event> > subsets = getSubsets(window);
-            ArrayList<Integer> bestSubsetsMatches = new ArrayList<>(Collections.nCopies(windowSize, 0));
+
+            ArrayList< ArrayList<Integer> > bestSubsets =
+                    new ArrayList<>(Collections.nCopies(windowSize - patternSize + 1,
+                            new ArrayList<>(Collections.nCopies(windowSize, 0))));
+
+            ArrayList<Integer> bestSubsetsMatches =
+                    new ArrayList<>(Collections.nCopies(windowSize - patternSize + 1, 0));
+
+            int minCount = window.get(0).getCount();
 
             for (var subset : subsets) {
-                int k = subset.size() - 1;
-                if(k == -1){
+                int index = subset.size() - patternSize;
+
+                if(index < 0 || !subset.contains(window.get(windowSize - 1))){
                     continue;
                 }
 
@@ -494,22 +519,41 @@ public class Main {
                     runtime.getEventService().sendEventBean(dummyEvent, "Event");
                 }
 
-                if(currentMatches > bestSubsetsMatches.get(k)){
-                    bestSubsetsMatches.set(k, currentMatches);
+                if(currentMatches > bestSubsetsMatches.get(index)){
+                    bestSubsetsMatches.set(index, currentMatches);
+                    bestSubsets.set(index, new ArrayList<>(Collections.nCopies(windowSize, 0)));
+                    for(Event e : subset){
+                        bestSubsets.get(index).set(e.getCount() - minCount, 1);
+                    }
                 }
             }
 
-            printer.printRecord(bestSubsetsMatches);
 
+            matchesPrinter.printRecord(bestSubsetsMatches);
+            subsetsPrinter.printRecord(bestSubsets);
+
+            int removedEventCount = window.get(0).getCount();
             window.remove(0);
 
             CSVRecord e = events.next();
 
-            Event event = new Event(e.get(0), Double.parseDouble(e.get(1)), count, id);
-            window.add(event);
+            Event newEvent = new Event(e.get(0), Double.parseDouble(e.get(1)), count, id);
+            window.add(newEvent);
+
+            leadingEventCount = newEvent.getCount();
+
+            for(var subset : subsets){
+                for (int i = 0; i < subset.size(); i++) {
+                    if(subset.get(i).getCount() == removedEventCount){
+                        subset.set(i, newEvent);
+                        break;
+                    }
+                }
+            }
 
             count += 1;
             id += 1;
+
             if(printProgress && (id % toPrint == 0)){
                 System.out.println(id);
             }
@@ -526,7 +570,8 @@ public class Main {
             }
         }
 
-        printer.close();
+        matchesPrinter.close();
+        subsetsPrinter.close();
         eventsParser.close();
     }
 

@@ -87,7 +87,7 @@ def net_train(epochs, batch_interval, batch_size, epoch_interval=1):
     for epoch in range(epochs):
         current_epoch_losses = []
         X = pd.read_csv(constants.train_file_path, chunksize=batch_size, header=None, usecols=[0, 1])
-        Y = pd.read_csv(constants.bestsubset_train_labels, chunksize=batch_size, header=None)
+        Y = pd.read_csv(constants.bestsubset_train_labels, chunksize=batch_size, header=None, usecols=[5])
         global previous_leftover_x, previous_leftover_y
         previous_leftover_x = None
         previous_leftover_y = None
@@ -136,7 +136,7 @@ def net_test(net, batch_size):
     net.eval()
     batch_idx = 0
     X = pd.read_csv(constants.test_file_path, chunksize=batch_size, header=None, usecols=[0, 1])
-    Y = pd.read_csv(constants.bestsubset_test_labels, chunksize=batch_size, header=None)
+    Y = pd.read_csv(constants.bestsubset_test_labels, chunksize=batch_size, header=None, usecols=[5])
     i = 0
     with torch.no_grad():
         x, y = get_batch(X, Y)
