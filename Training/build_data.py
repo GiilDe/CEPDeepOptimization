@@ -1,40 +1,40 @@
-import constants
+from constants import constants
 import random
 import pandas as pd
-import processing_utilities
+import numpy as np
+import os
 
 
-def build_sequences(is_test):
-    file_path = constants.test_file_path if is_test else constants.train_file_path
-    file_path_seqs = constants.test_file_path_sequences if is_test else constants.train_file_path_sequences
-    data_stream = pd.read_csv(file_path, header=None)
-    window_size = constants.window_limit
-    for i in range(window_size - 1, len(data_stream) - window_size + 1):
-        window = data_stream.loc[i - (window_size - 1):i + window_size - 1]
-        window = pd.DataFrame(window.values.flatten())
-        window = window.T
-        window.to_csv(file_path_seqs, index=False, header=False, mode='a')
+def build_labels(is_train):
+    file = open(constants['train_filters_file_path'] if is_train else constants['test_filters_file_path'], "w")
+    stream_size = constants['train_size'] if is_train else constants['test_size']
+    for i in range(int(stream_size * constants['window_repeat'])):
+        file.write(str(np.random.uniform(0, 1)) + "\n")
         if i % 1000 == 0:
             print(i)
+    file.close()
 
 
-def old_build_sequences(is_test):
-    file_path = constants.test_file_path if is_test else constants.train_file_path
-    file_path_seqs = constants.test_file_path_sequences if is_test \
-        else constants.train_file_path_sequences
-    data_stream = open(file_path, 'r')
-    seqs_file = open(file_path_seqs, 'w')
-    events = [processing_utilities.get_event_from_str(line, *constants.event_format) for line in data_stream]
-    window_size = constants.window_limit
-    for i in range(window_size - 1, len(events) - window_size):
-        window = events[i - (window_size - 1):i + window_size]
-        for event in window:
-            seqs_file.write(str(event) + ";")
-        seqs_file.write("\n")
-        if i % 1000 == 0:
-            print(i)
-    data_stream.close()
-    seqs_file.close()
+def build_data_stream_with_repeat(is_train):
+    read_file = open(constants['train_stream_path'] if is_train else constants['test_stream_path'], "r")
+    write_file = open(constants['train_stream_path_repeat'] if is_train else constants['test_stream_path_repeat'], "w")
+    i = 0
+    while True:
+        window = []
+        for _ in range(constants['window_size']):
+            line = read_file.readline()
+            if line != "":
+                window.append(line)
+            else:
+                read_file.close()
+                write_file.close()
+                return
+        for _ in range(constants['window_repeat']):
+            for line in window:
+                write_file.write(line)
+                if i % 1000 == 0:
+                    print(i)
+                i += 1
 
 
 def build_data_stream():
@@ -55,5 +55,14 @@ def build_data_stream():
             counter += 1
 
 
+def build_data_from_stream():
+    build_labels(True)
+    build_labels(False)
+    build_data_stream_with_repeat(True)
+    build_data_stream_with_repeat(False)
+    os.chdir(os.path.dirname("../"))
+    os.system("java -jar Application.jar")
+
+
 if __name__ == "__main__":
-    build_sequences(False)
+    build_data_from_stream()

@@ -1,107 +1,147 @@
-import scipy.stats as stats
-import sklearn.metrics as metrics
 import torch
 import torch.functional
-import torch.nn as nn
 import torch.optim as optim
-from torch.autograd import Variable
-import numpy as np
-
-import constants
+import pandas as pd
 import nets
-import processing_utilities
+import numpy as np
+from constants import constants
+import scipy.stats as stats
+
+event_size = 5
+
+allow_gpu = False
+dev = "cuda" if allow_gpu and torch.cuda.is_available() else "cpu"
+
+device = torch.device(dev)
 
 loss_function_type = torch.nn.MSELoss
+batch_size = 32
+model_path = "training_data/second_net"
+training_report_path = "training_data/report.txt"
+last_predictions_file_path = "training_data/last predictions.txt"
 
 
-def get_batch(sequences, labels, batch_size, normalize):
-    batch_x = []
-    batch_y = []
-    finished = False
-    i = 0
-    while i < batch_size:
-        x_line, y_line = sequences.readline(), labels.readline()
-        if x_line in constants.stop_lines:
-            finished = True
-            break
-        x, y = get_xy(x_line, y_line, normalize)
-        batch_x.append(x)
-        batch_y.append(y)
-        i += 1
+def get_batch_events(X, is_train=True):
+    def get_dummies(x):
+        padding = pd.DataFrame([['A', -1], ['B', -1], ['C', -1], ['D', -1]])
+        x = padding.append(x, ignore_index=True)
+        x = pd.get_dummies(x)
+        x = x.drop(axis=0, labels=[0, 1, 2, 3])
+        return x
 
-    batch_x = torch.stack(batch_x) if batch_x != [] else None
-    batch_y = torch.stack(batch_y) if batch_y != [] else None
-    return batch_x, batch_y, finished
-
-
-def get_xy(x_line, y_line, normalize):
-    x = get_x(x_line)
-    y = get_y(normalize, y_line)
-    return x, y
+    try:
+        batch = next(X)
+        batch = get_dummies(batch)
+        assert list(batch.columns) == [1, '0_A', '0_B', '0_C', '0_D']
+        batch = torch.tensor(batch.to_numpy(), dtype=torch.float, requires_grad=is_train) \
+            .reshape((batch_size, constants['window_size'], event_size))
+        return batch
+    except StopIteration:
+        return None
+    except RuntimeError:
+        return None
 
 
-def get_y(normalize, y_line):
-    y_str = y_line[1:].split(",")[0]
-    y = Variable(torch.tensor([float(y_str)], device=constants.device))
-    if normalize:
-        y = torch.tanh(y)
-    return y
+def get_batch_y(Y, is_train=True):
+    try:
+        batch = next(Y).to_numpy()
+        batch = torch.tensor(batch, dtype=torch.float, requires_grad=is_train).reshape((batch_size, 1))
+        return batch
+    except StopIteration:
+        return None
+    except RuntimeError:
+        return None
 
 
-def get_x(x_line):
-    x_temp = x_line.split(";")[:-1]
-    events = [processing_utilities.convert_event(processing_utilities.get_event_from_str(event, *constants.event_format)) for event in x_temp]
-    x = Variable(torch.stack(events), requires_grad=True).reshape(-1)
-    return x
+def initialize_data_y(is_train=True):
+    Y = pd.read_csv(constants['train_scores_file_path'] if is_train else constants['test_scores_file_path'],
+                    chunksize=batch_size, header=None)
+    return Y
 
 
-def net_train(epochs, batch_interval, batch_size, normalize=False, epoch_interval=1):
-    net = nets.FCNet()
-    net.to(device=constants.device)
-    criterion = loss_function_type()
-    criterion.to(device=constants.device)
+def window_to_score_initializer(is_train):
+    def initialize_data_x(is_train=True):
+        X = pd.read_csv(constants['train_stream_path_repeat'] if is_train else constants['test_stream_path_repeat'],
+                        chunksize=batch_size * constants['window_size'], header=None, usecols=[0, 1])
+        return X
+
+    return initialize_data_x(is_train), initialize_data_y(is_train), get_batch_events, get_batch_y
+
+
+def filtered_window_to_score_initializer(is_train):
+    def get_batch_f(F, is_train=True):
+        try:
+            batch = next(F).to_numpy()
+            batch = torch.tensor(batch, dtype=torch.float, requires_grad=is_train) \
+                .reshape((batch_size, constants['window_size'], 1))
+            return batch
+        except StopIteration:
+            return None
+        except RuntimeError:
+            return None
+
+    def get_batch_x(X_F, is_train=True):
+        X = X_F[0]
+        F = X_F[1]
+        events = get_batch_events(X, is_train)
+        filterings = get_batch_f(F, is_train)
+        return (events, filterings) if events is not None else None
+
+    def initialize_data_x(is_train):
+        X = pd.read_csv(constants['train_stream_path_repeat'] if is_train else constants['test_stream_path_repeat'],
+                        chunksize=batch_size * constants['window_size'], header=None, usecols=[0, 1])
+        F = pd.read_csv(constants['train_filters_file_path'] if is_train else constants['test_filters_file_path'],
+                        chunksize=batch_size * constants['window_size'], header=None)
+        return X, F
+
+    return initialize_data_x(is_train), initialize_data_y(is_train), get_batch_x, get_batch_y
+
+
+def net_train(epochs, batch_interval, net, initializer, epoch_interval=1, load_path=None):
+    loss_function = loss_function_type()
     optimizer = optim.SGD(net.parameters(), lr=0.0001, momentum=0.9)
+    epoch = 0
 
     epochs_train_losses = []
     epochs_test_losses = []
     epochs_test_pearson_corrs = []
-    epochs_test_mutual_infos = []
 
-    seqs_file = constants.train_file_path_sequences
-    labels_file = constants.train_labels_path
-    report_file = open(constants.training_report_path, 'w')
-    for epoch in range(epochs):
+    if load_path is not None:
+        checkpoint = torch.load(load_path)
+        net.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        loss_function = checkpoint['loss_function']
+        epoch = checkpoint['epoch']
+
+    loss_function.to(device=device)
+    net.to(device=device)
+    report_file = open(training_report_path, 'w')
+    while epoch < epochs:
         current_epoch_losses = []
-        sequences = open(seqs_file, 'r')
-        labels = open(labels_file, 'r')
+        X, Y, get_batch_x, get_batch_y = initializer(True)
         net.train()
         processed_events = 0
-        for _ in range(constants.window_limit):
-            sequences.readline()
-            labels.readline()
-        x, y, almost_finished = get_batch(sequences, labels, batch_size, normalize)
-        finished = False
-        while not finished and x is not None:
+        assert net.network[3].training is True
+        x, y = get_batch_x(X), get_batch_y(Y)
+        while x is not None and y is not None:
             optimizer.zero_grad()
             y_hat = net.forward(x)
-            loss = criterion(y_hat, y)
+            loss = loss_function(y_hat, y)
             loss.backward()
             optimizer.step()
             batch_loss = loss.data.item()
             current_epoch_losses.append(batch_loss)
             if processed_events % batch_interval == 0:
-                print("Epoch " + str(epoch) + ": Processed " + str(processed_events) + " out of " + str(constants.train_size))
+                print("Epoch " + str(epoch) + ": Processed " + str(processed_events) + " out of "
+                      + str(constants['train_size']) + " sampled loss_function of " + str(batch_loss))
             processed_events += batch_size
-            finished = almost_finished
-            x, y, almost_finished = get_batch(sequences, labels, batch_size, normalize)
-        sequences.close()
-        labels.close()
+            x, y = get_batch_x(X), get_batch_y(Y)
+
         if epoch % epoch_interval == 0:
             epochs_train_losses.append(np.average(current_epoch_losses))
-            test_loss, pearson_corr, mutual_info = net_test(net, batch_size, normalize)
+            test_loss, pearson_corr = net_test(net, initializer, loss_function)
             epochs_test_losses.append(test_loss)
             epochs_test_pearson_corrs.append(pearson_corr)
-            epochs_test_mutual_infos.append(mutual_info)
             train_losses = "Epochs train losses: " + str(epochs_train_losses)
             test_losses = "Epochs test losses: " + str(epochs_test_losses)
             pearson_corr = "Epochs test pearson corrs: " + str(epochs_test_pearson_corrs)
@@ -111,62 +151,49 @@ def net_train(epochs, batch_interval, batch_size, normalize=False, epoch_interva
             report_file.write(train_losses + "\n")
             report_file.write(test_losses + "\n")
             report_file.write(pearson_corr + "\n")
-        torch.save(net, constants.model_path + "_" + str(epoch))
+
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': net.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss_function': loss_function,
+        }, model_path + "_" + str(epoch))
+        epoch += 1
 
 
-def net_test(net, batch_size, normalize=False, loss_per_label=False):
-    criterion = nn.MSELoss()
-    criterion.to(device=constants.device)
+def net_test(net, initializer, loss_function):
     epoch_losses = []
-    sequences = open(constants.test_file_path_sequences, 'r')
-    labels = open(constants.test_file_path_labels, 'r')
-    for _ in range(constants.window_limit):
-        sequences.readline()
-        labels.readline()
-    last_predictions = open(constants.last_predictions_file_path, 'w')
+    last_predictions = open(last_predictions_file_path, 'w')
     last_predictions.write("y y_hat\n")
     net.eval()
+    assert net.network[3].training is False
     batch_idx = 0
+    X, Y, get_batch_x, get_batch_y = initializer(False)
+    i = 0
     all_y = []
     all_y_hat = []
-    x, y, finished = get_batch(sequences, labels, batch_size, normalize)
-    while not finished and x is not None:
-        all_y += [row.data.item() for row in y]
-        y_hat = net.forward(x)
-        all_y_hat += [row.data.item() for row in y_hat]
-        loss = criterion(y_hat, y)
-        batch_loss = loss.data.item()
-        epoch_losses.append(batch_loss)
-        batch_idx += 1
-        for spec_y, spec_y_hat in zip(y, y_hat):
-            last_predictions.write(str(spec_y.data.item()) + " " + str(spec_y_hat.data.item()) + "\n")
-        x, y, finished = get_batch(sequences, labels, batch_size, normalize)
+    with torch.no_grad():
+        x, y = get_batch_x(X, False), get_batch_y(Y, False)
+        while x is not None and y is not None:
+            all_y += [row.data.item() for row in y]
+            y_hat = net.forward(x)
+            all_y_hat += [row.data.item() for row in y_hat]
+            loss = loss_function(y_hat, y)
+            batch_loss = loss.data.item()
+            epoch_losses.append(batch_loss)
+            batch_idx += 1
+            for spec_y, spec_y_hat in zip(y, y_hat):
+                last_predictions.write(str(spec_y.numpy()) + " " + str(spec_y_hat.numpy()) + "\n")
+            if i % 1000 == 0:
+                print(i)
+            i += batch_size
+            x, y = get_batch_x(X, False), get_batch_y(Y, False)
 
     pearson_corr = stats.pearsonr(all_y, all_y_hat)[0]
-    mutual_info = metrics.mutual_info_score(all_y, all_y_hat)
-    if loss_per_label:
-        loss_per_label = dict()
-        mse_loss = torch.nn.MSELoss()
-        for y, y_hat in zip(all_y, all_y_hat):
-            if y not in loss_per_label:
-                loss_per_label[y] = []
-            variable1 = Variable(torch.tensor(y), requires_grad=False)
-            variable2 = Variable(torch.tensor(y_hat), requires_grad=False)
-            loss = mse_loss(variable1, variable2).data.item()
-            loss_per_label[y].append(loss)
-        last_predictions.write("Label    Avg    Std\n")
-        loss_per_label_sorted = dict(sorted(loss_per_label.items()))
-        for y in loss_per_label_sorted:
-            y_errors = loss_per_label_sorted[y]
-            avg = np.average(y_errors)
-            std = np.std(y_errors)
-            last_predictions.write(str(y) + "    " + str(avg) + "    " + str(std) + "\n")
-    sequences.close()
-    labels.close()
+    last_predictions.close()
     test_loss = np.average(epoch_losses)
-    return test_loss, pearson_corr, mutual_info
+    return test_loss, pearson_corr
 
 
 if __name__ == "__main__":
-    net_train(100, 1000, 32)
-
+    net_train(100, 1000, nets.FilteredWindowToScoreFC(), filtered_window_to_score_initializer, load_path="")

@@ -1,0 +1,17 @@
+{
+  "train_stream_path": "Data/train_data_stream.txt",
+  "test_stream_path": "Data/test_data_stream.txt",
+  "train_stream_path_repeat": "Data/train_data_stream_repeat.txt",
+  "test_stream_path_repeat": "Data/test_data_stream_repeat.txt",
+  "window_size": "10",
+  "train_filters_file_path": "Data/train_labels.txt",
+  "test_filters_file_path": "Data/test_labels.txt",
+  "train_scores_file_path": "Data/train_scores.txt",
+  "test_scores_file_path": "Data/test_scores.txt",
+  "test_size": "999990",
+  "train_size": "7913670",
+  "test_size_repeat": "9999900",
+  "train_size_repeat": "79136700",
+  "window_repeat": "10",
+  "pattern_window_size": "8"
+}
