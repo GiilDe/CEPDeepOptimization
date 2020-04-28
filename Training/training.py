@@ -112,6 +112,9 @@ def net_train(epochs, batch_interval, net, initializer, epoch_interval=1, load_p
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         loss_function = checkpoint['loss_function']
         epoch = checkpoint['epoch']
+        epochs_train_losses = checkpoint['epochs_train_losses']
+        epochs_test_losses = checkpoint['epochs_test_losses']
+        epochs_test_pearson_corrs = checkpoint['epochs_test_pearson_corrs']
 
     loss_function.to(device=device)
     net.to(device=device)
@@ -157,6 +160,9 @@ def net_train(epochs, batch_interval, net, initializer, epoch_interval=1, load_p
             'model_state_dict': net.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'loss_function': loss_function,
+            'epochs_train_losses': epochs_train_losses,
+            'epochs_test_losses': epochs_test_losses,
+            'epochs_test_pearson_corrs': epochs_test_pearson_corrs
         }, model_path + "_" + str(epoch))
         epoch += 1
 
