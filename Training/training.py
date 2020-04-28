@@ -196,4 +196,5 @@ def net_test(net, initializer, loss_function):
 
 
 if __name__ == "__main__":
-    net_train(100, 1000, nets.FilteredWindowToScoreFC(), filtered_window_to_score_initializer, load_path="")
+    net_train(100, 1000, nets.FilteredWindowToScoreFC(), filtered_window_to_score_initializer,
+              load_path="training_data/second_net_2")
