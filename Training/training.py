@@ -21,6 +21,14 @@ training_report_path = "training_data/report.txt"
 last_predictions_file_path = "training_data/last predictions.txt"
 
 
+def get_batch_matches(M, is_train=True):
+    try:
+        batch = next(M)
+        return batch
+    except (StopIteration, RuntimeError):
+        return None
+
+
 def get_batch_events(X, is_train=True):
     def get_dummies(x):
         padding = pd.DataFrame([['A', -1], ['B', -1], ['C', -1], ['D', -1]])
@@ -32,13 +40,10 @@ def get_batch_events(X, is_train=True):
     try:
         batch = next(X)
         batch = get_dummies(batch)
-        assert list(batch.columns) == [1, '0_A', '0_B', '0_C', '0_D']
         batch = torch.tensor(batch.to_numpy(), dtype=torch.float, requires_grad=is_train) \
             .reshape((batch_size, constants['window_size'], event_size))
         return batch
-    except StopIteration:
-        return None
-    except RuntimeError:
+    except (StopIteration, RuntimeError):
         return None
 
 
@@ -47,9 +52,7 @@ def get_batch_y(Y, is_train=True):
         batch = next(Y).to_numpy()
         batch = torch.tensor(batch, dtype=torch.float, requires_grad=is_train).reshape((batch_size, 1))
         return batch
-    except StopIteration:
-        return None
-    except RuntimeError:
+    except (StopIteration, RuntimeError):
         return None
 
 
@@ -75,9 +78,7 @@ def filtered_window_to_score_initializer(is_train):
             batch = torch.tensor(batch, dtype=torch.float, requires_grad=is_train) \
                 .reshape((batch_size, constants['window_size'], 1))
             return batch
-        except StopIteration:
-            return None
-        except RuntimeError:
+        except (StopIteration, RuntimeError):
             return None
 
     def get_batch_x(X_F, is_train=True):
@@ -202,5 +203,4 @@ def net_test(net, initializer, loss_function):
 
 
 if __name__ == "__main__":
-    net_train(100, 1000, nets.FilteredWindowToScoreFC(), filtered_window_to_score_initializer,
-              load_path="training_data/second_net_2")
+    net_train(100, 1000, nets.FilteredWindowToScoreFC(keep_filterings=False, automatic_filtering=False), filtered_window_to_score_initializer)

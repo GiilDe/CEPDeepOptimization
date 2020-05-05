@@ -1,5 +1,6 @@
 import com.espertech.esper.common.client.EPCompiled;
 import com.espertech.esper.common.client.configuration.Configuration;
+import com.espertech.esper.common.internal.event.bean.core.BeanEventBean;
 import com.espertech.esper.compiler.client.CompilerArguments;
 import com.espertech.esper.compiler.client.EPCompileException;
 import com.espertech.esper.compiler.client.EPCompiler;
@@ -10,7 +11,7 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import java.io.*;
-import java.util.Iterator;
+import java.util.*;
 
 import org.apache.log4j.BasicConfigurator;
 import org.json.simple.JSONObject;
@@ -21,19 +22,8 @@ import org.json.simple.parser.ParseException;
 public class Main {
 
     public static final String PATTERN = "Application/pattern";
-    static int matchesNum = 0;
 
     static int toPrintTime = 10000;
-
-    static int currentMatches;
-
-    public static final EsperRuntimeConfg ESPER_RUNTIME_CONFG = new EsperRuntimeConfg().invoke();
-    public static final Configuration CONFIGURATION = ESPER_RUNTIME_CONFG.getConfiguration();
-    public static final EPCompiled EP_COMPILED = ESPER_RUNTIME_CONFG.getEpCompiled();
-
-    public static UpdateListener matchCounter = (newData, oldData, s, r) -> {
-        currentMatches += newData.length;
-    };
 
     public static JSONObject CONSTANTS;
 
@@ -50,6 +40,29 @@ public class Main {
             e.printStackTrace();
         }
     }
+
+    static int MATCH_SIZE = Integer.parseInt((String) CONSTANTS.get("match_size"));
+
+    public static final EsperRuntimeConfg ESPER_RUNTIME_CONFG = new EsperRuntimeConfg().invoke();
+    public static final Configuration CONFIGURATION = ESPER_RUNTIME_CONFG.getConfiguration();
+    public static final EPCompiled EP_COMPILED = ESPER_RUNTIME_CONFG.getEpCompiled();
+
+    static int currentMatchesNum;
+    public static UpdateListener matchCounter = (newData, oldData, s, r) -> currentMatchesNum += newData.length;
+
+    static List< ArrayList<Integer> > currentMatches = new LinkedList<>();
+    public static UpdateListener matchMemorizer = (newData, oldData, s, r) -> {
+        for(var match : newData){
+            Object[] events = ((HashMap<String, BeanEventBean>)match.getUnderlying()).values().toArray();
+            ArrayList<Integer> eventsCounts = new ArrayList<>(Collections.nCopies(MATCH_SIZE, 0));
+            for (int i = 0; i < MATCH_SIZE; i++) {
+                eventsCounts.set(i, (Integer) ((BeanEventBean)events[i]).get("count"));
+            }
+            currentMatches.add(eventsCounts);
+        }
+    };
+
+
 
     public static final Event DUMMY_EVENT = new Event("-1", -1, -1);
 
@@ -68,10 +81,10 @@ public class Main {
     public static void main(String[] s) {
         BasicConfigurator.configure();
         try {
-            buildScores((String) CONSTANTS.get("test_stream_path_repeat"),
-                    (String) CONSTANTS.get("test_filters_file_path"), (String) CONSTANTS.get("test_scores_file_path"));
-//            buildScores((String) CONSTANTS.get("train_stream_path_repeat"),
-//                    (String) CONSTANTS.get("train_filters_file_path"), (String) CONSTANTS.get("train_scores_file_path"));
+//            writeWindowsMatches((String) CONSTANTS.get("test_stream_path"),
+//                    (String) CONSTANTS.get("test_matches"));
+            writeWindowsMatches((String) CONSTANTS.get("train_stream_path"),
+                    (String) CONSTANTS.get("train_matches"));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -117,13 +130,79 @@ public class Main {
         return mathcesRatio / complexityRatio;
     }
 
+    static void writeWindowsMatches(String inputPath, String matchesPath) throws IOException {
+        CSVParser eventsParser = CSVParser.parse(new FileReader(inputPath), CSVFormat.DEFAULT);
+        CSVPrinter matchesPrinter = new CSVPrinter(new FileWriter(matchesPath), CSVFormat.EXCEL);
+
+        EPRuntime runtime = getEpRuntime(matchMemorizer);
+
+        long startTime = System.currentTimeMillis();
+
+        Iterator<CSVRecord> events = eventsParser.iterator();
+
+        final int windowSize = Integer.parseInt((String) CONSTANTS.get("window_size"));
+        boolean finished = false;
+        int progress = 0;
+        while (true) {
+            Event[] windowEvents = new Event[windowSize];
+
+            int count = 0;
+            for (int i = 0; i < windowSize; i++) {
+                if (!events.hasNext()) {
+                    finished = true;
+                    break;
+                }
+
+                CSVRecord nextEventRecord = events.next();
+
+                final var nextEvent =
+                        new Event(nextEventRecord.get(0), Double.parseDouble(nextEventRecord.get(1)), count);
+
+                windowEvents[i] = nextEvent;
+                count += 1;
+            }
+
+            if(finished) {
+                break;
+            }
+
+            for (int i = 0; i < windowSize; i++) {
+                final Event nextEvent = windowEvents[i];
+                runtime.getEventService().sendEventBean(nextEvent, "Event");
+            }
+
+            //matchesPrinter.printRecords(currentMatches.isEmpty() ? "-1" : currentMatches);
+            if(currentMatches.isEmpty()){
+                matchesPrinter.printRecord("-1");
+            }
+            else{
+                for(var match : currentMatches){
+                    for(Integer c : match){
+                        matchesPrinter.print(c);
+                    }
+                }
+                matchesPrinter.println();
+            }
+
+            currentMatches.clear();
+            partition(runtime);
+
+            progress += 1;
+            printProgress(startTime, progress);
+        }
+
+        runtime.destroy();
+        eventsParser.close();
+        matchesPrinter.close();
+    }
+
     static void buildScores(String inputPath, String labelsPath, String scoresPath) throws IOException {
 
         CSVParser eventsParser = CSVParser.parse(new FileReader(inputPath), CSVFormat.DEFAULT);
         CSVParser labelsParser = CSVParser.parse(new FileReader(labelsPath), CSVFormat.DEFAULT);
         CSVPrinter scoresPrinter = new CSVPrinter(new FileWriter(scoresPath), CSVFormat.DEFAULT);
 
-        EPRuntime runtime = getEpRuntime();
+        EPRuntime runtime = getEpRuntime(matchCounter);
 
         long startTime = System.currentTimeMillis();
 
@@ -161,7 +240,7 @@ public class Main {
                 break;
             }
 
-            currentMatches = 0;
+            currentMatchesNum = 0;
 
             for (int i = 0; i < windowSize; i++) {
                 final Event nextEvent = windowEvents[i];
@@ -179,8 +258,8 @@ public class Main {
 
             partition(runtime);
 
-            final int filteringMatches = currentMatches;
-            currentMatches = 0;
+            final int filteringMatches = currentMatchesNum;
+            currentMatchesNum = 0;
 
             for (int i = 0; i < windowSize; i++) {
                 final Event nextEvent = windowEvents[i];
@@ -189,8 +268,8 @@ public class Main {
 
             partition(runtime);
 
-            final int matches = currentMatches;
-            currentMatches = 0;
+            final int matches = currentMatchesNum;
+            currentMatchesNum = 0;
 
             final var windowScore = getWindowScore(matches, filteringMatches, windowLabels);
             scoresPrinter.printRecord(windowScore);
@@ -224,11 +303,10 @@ public class Main {
             double minPassed = secPassed/60;
             System.out.println("Time passed: " + secPassed + " secs");
             System.out.println("Time passed: " + minPassed + " mins");
-            System.out.println("Current matches num: " + matchesNum);
         }
     }
 
-    private static EPRuntime getEpRuntime() {
+    private static EPRuntime getEpRuntime(UpdateListener l) {
         EPRuntime runtime = EPRuntimeProvider.getDefaultRuntime(CONFIGURATION);
         EPDeployment deployment;
         try {
@@ -239,7 +317,7 @@ public class Main {
         }
 
         runtime.getDeploymentService().getStatement(deployment.getDeploymentId(),
-                STATEMENT_NAME).addListener(matchCounter);
+                STATEMENT_NAME).addListener(l);
 
         return runtime;
     }
