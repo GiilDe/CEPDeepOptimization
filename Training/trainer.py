@@ -12,7 +12,6 @@ from neural_combinatorial_rl import NeuralCombOptNet
 import datasets
 from constants import constants
 import nets
-from datasets import matches_sum, found_matches_sum, found_matches_portion
 
 
 def str2bool(v):
@@ -98,7 +97,7 @@ else:
         args['use_cuda'],
         args['encoder_bi_directional'],
         args['encoder_num_layers']
-    ) if args['net_type'] == 'pointer_net' else nets.NeuralCombOptLinearNet_OLD(args['batch_size'], args['use_cuda'])
+    ) if args['net_type'] == 'pointer_net' else nets.NeuralCombOptLinearNet(args['batch_size'], args['use_cuda'])
 
 save_dir = os.path.join(os.getcwd(), args['output_dir'], args['run_name'])
 
@@ -162,17 +161,6 @@ def step(model, batch):
     return R, probs, actions, actions_idxs, x, batch_found_matches_sum, batch_matches_sum, chosen_events_portion
 
 
-def step_OLD(model, batch):
-    x, m = batch
-    if args['use_cuda']:
-        x = x.cuda()
-    chosen_events_np, log_prob = model(x)
-    R = datasets.get_rewards_OLD(m, chosen_events_np)
-    if args['use_cuda']:
-        R = R.cuda()
-    return R, log_prob, chosen_events_np
-
-
 repeat = 0
 
 for i in range(epoch, epoch + args['n_epochs']):
@@ -182,104 +170,98 @@ for i in range(epoch, epoch + args['n_epochs']):
         model.train()
 
         # sample_batch is [batch_size, event_size, window_size]
-        # for batch_id, batch in enumerate(training_dataloader if args['repeat_batch'] != 1 else tqdm(training_dataloader)):
-        for batch_id, batch in enumerate(datasets.DataloaderOLD("train", args['batch_size'])):
-            # for _ in range(args['repeat_batch']):
+        d = training_dataloader if args['repeat_batch'] != 1 else tqdm(training_dataloader)
+        for batch_id, batch in enumerate(d):
+            for _ in range(args['repeat_batch']):
 
-            # R, probs, actions, actions_idxs, x, batch_found_matches_sum, batch_matches_sum, chosen_events_num = \
-            #     step(model, batch)
+                R, probs, actions, actions_idxs, x, batch_found_matches_sum, batch_matches_sum, chosen_events_num = \
+                    step(model, batch)
 
-            R, probs, chosen_events = step_OLD(model, batch)
+                if args['net_type'] == 'pointer_net':
+                    log_probs = torch.zeros_like(probs[0])
 
-            if args['net_type'] == 'pointer_net':
-                log_probs = torch.zeros_like(probs[0])
+                    finished_batches_mask = torch.ones_like(probs[0]).int()
 
-                finished_batches_mask = torch.ones_like(probs[0]).int()
+                    if args['use_cuda']:
+                        log_probs = log_probs.cuda()
+                        finished_batches_mask = finished_batches_mask.cuda()
 
-                if args['use_cuda']:
-                    log_probs = log_probs.cuda()
-                    finished_batches_mask = finished_batches_mask.cuda()
+                    for prob, idxs in zip(probs, actions_idxs):
+                        # compute the sum of the log probs
+                        # for each tour in the batch
+                        log_prob = torch.log(prob)
+                        # zero the log_prob where previous(!) batch action is 0 (=finished)
+                        log_prob = log_prob * finished_batches_mask
+                        finished_batches_mask = finished_batches_mask * idxs.bool().int()
 
-                for prob, idxs in zip(probs, actions_idxs):
-                    # compute the sum of the log probs
-                    # for each tour in the batch
-                    log_prob = torch.log(prob)
-                    # zero the log_prob where previous(!) batch action is 0 (=finished)
-                    log_prob = log_prob * finished_batches_mask
-                    finished_batches_mask = finished_batches_mask * idxs.bool().int()
+                        log_probs += log_prob
+                else:  # net is fully connected
+                    log_probs = probs
 
-                    log_probs += log_prob
-            else:  # net is fully connected
-                log_probs = probs
+                nll = -log_probs
 
-            nll = -log_probs
+                # guard against nan
+                nll[(nll != nll).detach()] = 0.
+                # clamp any -inf's to 0 to throw away this tour
+                log_probs[(log_probs < -1000).detach()] = 0.
 
-            # guard against nan
-            nll[(nll != nll).detach()] = 0.
-            # clamp any -inf's to 0 to throw away this tour
-            log_probs[(log_probs < -1000).detach()] = 0.
+                if batch_id == 0:
+                    critic_exp_mvg_avg = R.mean()
+                else:
+                    critic_exp_mvg_avg = (critic_exp_mvg_avg * beta) + ((1. - beta) * R.mean())
 
-            if batch_id == 0:
-                critic_exp_mvg_avg = R.mean()
-            else:
-                critic_exp_mvg_avg = (critic_exp_mvg_avg * beta) + ((1. - beta) * R.mean())
+                advantage = R - critic_exp_mvg_avg
 
-            advantage = R - critic_exp_mvg_avg
+                # multiply each time step by the advantage
+                reinforce = advantage * log_probs
+                actor_loss = reinforce.mean()
 
-            # multiply each time step by the advantage
-            reinforce = advantage * log_probs
-            actor_loss = reinforce.mean()
+                actor_optim.zero_grad()
 
-            actor_optim.zero_grad()
+                actor_loss.backward()
 
-            actor_loss.backward()
+                # clip gradient norms
+                torch.nn.utils.clip_grad_norm_(model.actor_net.parameters(), float(args['max_grad_norm']), norm_type=2)
 
-            # clip gradient norms
-            torch.nn.utils.clip_grad_norm_(model.actor_net.parameters(), float(args['max_grad_norm']), norm_type=2)
+                actor_optim.step()
+                actor_scheduler.step()
 
-            actor_optim.step()
-            actor_scheduler.step()
+                critic_exp_mvg_avg = critic_exp_mvg_avg.detach()
 
-            critic_exp_mvg_avg = critic_exp_mvg_avg.detach()
+                # critic_scheduler.step()
 
-            # critic_scheduler.step()
+                # R = R.detach()
+                # critic_loss = critic_mse(v.squeeze(1), R)
+                # critic_optim.zero_grad()
+                # critic_loss.backward()
 
-            # R = R.detach()
-            # critic_loss = critic_mse(v.squeeze(1), R)
-            # critic_optim.zero_grad()
-            # critic_loss.backward()
+                # torch.nn.utils.clip_grad_norm_(model.critic_net.parameters(),
+                #        float(args['max_grad_norm']), norm_type=2)
 
-            # torch.nn.utils.clip_grad_norm_(model.critic_net.parameters(),
-            #        float(args['max_grad_norm']), norm_type=2)
+                # critic_optim.step()
 
-            # critic_optim.step()
+                train_step += 1
 
-            train_step += 1
-
-            # if not args['disable_tensorboard']:
-            #     log_value('avg_reward', R.mean().item(), train_step)
-            #     log_value('actor_loss', actor_loss.item(), train_step)
-            #     # log_value('critic_loss', critic_loss.item(), train_step)
-            #     log_value('critic_exp_mvg_avg', critic_exp_mvg_avg.item(), train_step)
-            #     log_value('nll', nll.mean().item(), train_step)
-            #found_matches_portion = batch_found_matches_sum / batch_matches_sum if batch_matches_sum != 0 else 1
-            if train_step % args['log_step'] == 0:
-                # print('\nepoch: {}, train_batch_id: {}, avg_reward: {}, found matches: {}/{}, found matches '
-                #       'portion: {}, chosen events portion: {}/{}'.format(i, batch_id, R.mean().item(),
-                #                                                          batch_found_matches_sum, batch_matches_sum,
-                #                                                          found_matches_portion, chosen_events_num,
-                #                                                          constants['window_size']))
-                print("Epoch " + str(epoch) + ": Processed " + " out of "
-                      + str(constants['train_size']) + " sampled reward of " + str(R.mean().item()) + "\n" +
-                      "and chosen events " + str(chosen_events[0]) + "\n" + "found matches portion: "
-                      + str(found_matches_portion))
-                # example_output = set()
-                # for action_idx in actions_idxs:
-                #     action_idx = action_idx[0].item()
-                #     example_output.add(action_idx)
-                # output = torch.zeros(constants['window_size']).int()
-                # output[[i - 1 for i in example_output if i != 0]] = 1
-                # print('Example train output: {}'.format(output.tolist()))
+                if not args['disable_tensorboard']:
+                    log_value('avg_reward', R.mean().item(), train_step)
+                    log_value('actor_loss', actor_loss.item(), train_step)
+                    # log_value('critic_loss', critic_loss.item(), train_step)
+                    log_value('critic_exp_mvg_avg', critic_exp_mvg_avg.item(), train_step)
+                    log_value('nll', nll.mean().item(), train_step)
+                found_matches_portion = batch_found_matches_sum / batch_matches_sum if batch_matches_sum != 0 else 1
+                if train_step % args['log_step'] == 0:
+                    print('\nepoch: {}, train_batch_id: {}, avg_reward: {}, found matches: {}/{}, found matches '
+                          'portion: {}, chosen events portion: {}/{}'.format(i, batch_id, R.mean().item(),
+                                                                             batch_found_matches_sum, batch_matches_sum,
+                                                                             found_matches_portion, chosen_events_num,
+                                                                             constants['window_size']))
+                    example_output = set()
+                    for action_idx in actions_idxs:
+                        action_idx = action_idx[0].item()
+                        example_output.add(action_idx)
+                    output = torch.zeros(constants['window_size']).int()
+                    output[[i - 1 for i in example_output if i != 0]] = 1
+                    print('Example train output: {}'.format(output.tolist()))
 
     print('\n~Validating~\n')
 

@@ -14,42 +14,6 @@ class NeuralCombOptLinearNet(nn.Module):
         return self.actor_net.forward(x)
 
 
-class NeuralCombOptLinearNet_OLD(nn.Module):
-    def __init__(self, batch_size, use_cuda):
-        super(NeuralCombOptLinearNet_OLD, self).__init__()
-        self.actor_net = WindowToFiltersReinforce_OLD(batch_size, use_cuda)
-
-    def forward(self, x):
-        return self.actor_net.forward(x)
-
-
-class WindowToFiltersReinforce_OLD(nn.Module):
-    def __init__(self, batch_size, use_cuda):
-        super(WindowToFiltersReinforce_OLD, self).__init__()
-        self.probs_net = WindowToFiltersFC(batch_size)
-        self.batch_size = batch_size
-        if use_cuda:
-            self.probs_net = self.probs_net.cuda()
-
-    def forward(self, events):
-        # events/events_probs dims: (batch_size, window_size)
-        events_probs = self.probs_net(events)
-        chosen_events = torch.zeros_like(events_probs)
-        chosen_events_np = np.zeros((self.batch_size, constants['window_size']))
-
-        for batch_i, event_i in product(range(self.batch_size), range(constants['window_size'])):
-            choice = np.random.choice([0, 1], size=None, p=[events_probs[batch_i, event_i].item(),
-                                                            1 - events_probs[batch_i, event_i].item()])
-            # choice = 0 event is chosen, choice = 1 event is not chosen
-            chosen_events[batch_i, event_i] = torch.tensor(choice).item()
-            chosen_events_np[batch_i, event_i] = 1 - choice  # for output reasons: flip choice
-
-        flipped_probs = torch.abs(chosen_events - events_probs)  # flip unchosen probabilities
-        windows_probs = torch.prod(flipped_probs, dim=1)
-        log_prob = torch.log(windows_probs)  # dims: (batch_size, 1)
-        return chosen_events_np, log_prob
-
-
 class WindowToFiltersReinforce(nn.Module):
     def __init__(self, batch_size, use_cuda):
         super(WindowToFiltersReinforce, self).__init__()
@@ -75,10 +39,6 @@ class WindowToFiltersReinforce(nn.Module):
         log_probs = torch.log(events_probs)
         masked_log_probs = log_probs * selections.int()
         log_probs = torch.sum(masked_log_probs, dim=1)
-
-        # flipped_probs = torch.abs((1 - selections.int()) - events_probs)  # flip unchosen probabilities
-        # windows_probs = torch.prod(flipped_probs, dim=1)
-        # log_probs = torch.log(windows_probs)  # dims: (batch_size, 1)
 
         for batch_actions in actions:
             batch_actions += [0]*(constants['window_size'] + 1 - len(batch_actions))
