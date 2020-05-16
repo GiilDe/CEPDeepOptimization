@@ -21,7 +21,7 @@ import org.json.simple.parser.ParseException;
 
 public class Main {
 
-    public static final String PATTERN = "Application/pattern";
+    public static final String PATTERN = "GetMatches/pattern";
 
     static int toPrintTime = 10000;
 
@@ -47,10 +47,8 @@ public class Main {
     public static final Configuration CONFIGURATION = ESPER_RUNTIME_CONFG.getConfiguration();
     public static final EPCompiled EP_COMPILED = ESPER_RUNTIME_CONFG.getEpCompiled();
 
-    static int currentMatchesNum;
-    public static UpdateListener matchCounter = (newData, oldData, s, r) -> currentMatchesNum += newData.length;
-
     static List< ArrayList<Integer> > currentMatches = new LinkedList<>();
+
     public static UpdateListener matchMemorizer = (newData, oldData, s, r) -> {
         for(var match : newData){
             Object[] events = ((HashMap<String, BeanEventBean>)match.getUnderlying()).values().toArray();
@@ -63,71 +61,18 @@ public class Main {
     };
 
 
-
     public static final Event DUMMY_EVENT = new Event("-1", -1, -1);
-
-    static double patternWindowComplexity(int n){
-        return 2^n;
-    }
-
-    public static double FULL_WINDOW_COMPLEXITY;
-
-    static {
-        int patternWindowSize = Integer.parseInt((String) CONSTANTS.get("pattern_window_size"));
-        int windowSize = Integer.parseInt((String) CONSTANTS.get("window_size"));
-        FULL_WINDOW_COMPLEXITY = patternWindowComplexity(patternWindowSize)*(windowSize - patternWindowSize + 1);
-    }
 
     public static void main(String[] s) {
         BasicConfigurator.configure();
         try {
-//            writeWindowsMatches((String) CONSTANTS.get("test_stream_path"),
-//                    (String) CONSTANTS.get("test_matches"));
+            writeWindowsMatches((String) CONSTANTS.get("test_stream_path"),
+                    (String) CONSTANTS.get("test_matches"));
             writeWindowsMatches((String) CONSTANTS.get("train_stream_path"),
                     (String) CONSTANTS.get("train_matches"));
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    static int round(double label){
-        if (label > 0.5){
-            return 1;
-        }
-        return 0;
-    }
-
-    static double getWindowScore(int windowMatches, int filteringMatches, Double[] labels){
-
-        int patternWindowSize = Integer.parseInt((String) CONSTANTS.get("pattern_window_size"));
-        int windowComplexity = 0;
-
-        int patternWindowSelected = 0;
-
-        for (int i = 0; i < patternWindowSize; i++)
-            patternWindowSelected += round(labels[i]);
-
-
-        windowComplexity += patternWindowComplexity(patternWindowSelected);
-
-        for (int i = 0; i < labels.length - patternWindowSize; i++) {
-            patternWindowSelected -= round(labels[i]);
-            patternWindowSelected += round(labels[i + patternWindowSize]);
-            windowComplexity += patternWindowComplexity(patternWindowSelected);
-        }
-
-        double mathcesRatio;
-        if(windowMatches == 0){
-            mathcesRatio = 1;
-        } else {
-            mathcesRatio = (double) filteringMatches / windowMatches;
-        }
-
-        double complexityRatio = windowComplexity/FULL_WINDOW_COMPLEXITY;
-        if(windowComplexity == 0) {
-            return 1;
-        }
-        return mathcesRatio / complexityRatio;
     }
 
     static void writeWindowsMatches(String inputPath, String matchesPath) throws IOException {
@@ -153,7 +98,7 @@ public class Main {
                     break;
                 }
 
-                CSVRecord nextEventRecord = events.next();
+                final CSVRecord nextEventRecord = events.next();
 
                 final var nextEvent =
                         new Event(nextEventRecord.get(0), Double.parseDouble(nextEventRecord.get(1)), count);
@@ -171,7 +116,6 @@ public class Main {
                 runtime.getEventService().sendEventBean(nextEvent, "Event");
             }
 
-            //matchesPrinter.printRecords(currentMatches.isEmpty() ? "-1" : currentMatches);
             if(currentMatches.isEmpty()){
                 matchesPrinter.printRecord("-1");
             }
@@ -191,98 +135,11 @@ public class Main {
             printProgress(startTime, progress);
         }
 
+        currentMatches.clear();
+        partition(runtime);
         runtime.destroy();
         eventsParser.close();
         matchesPrinter.close();
-    }
-
-    static void buildScores(String inputPath, String labelsPath, String scoresPath) throws IOException {
-
-        CSVParser eventsParser = CSVParser.parse(new FileReader(inputPath), CSVFormat.DEFAULT);
-        CSVParser labelsParser = CSVParser.parse(new FileReader(labelsPath), CSVFormat.DEFAULT);
-        CSVPrinter scoresPrinter = new CSVPrinter(new FileWriter(scoresPath), CSVFormat.DEFAULT);
-
-        EPRuntime runtime = getEpRuntime(matchCounter);
-
-        long startTime = System.currentTimeMillis();
-
-        Iterator<CSVRecord> events = eventsParser.iterator();
-        Iterator<CSVRecord> labels = labelsParser.iterator();
-
-        final int windowSize = Integer.parseInt((String) CONSTANTS.get("window_size"));
-        boolean finished = false;
-        int progress = 0;
-        while (true) {
-            Event[] windowEvents = new Event[windowSize];
-            Double[] windowLabels = new Double[windowSize];
-
-            int count = 0;
-            for (int i = 0; i < windowSize; i++) {
-
-                if (!events.hasNext()) {
-                    finished = true;
-                    break;
-                }
-
-                CSVRecord nextEventRecord = events.next();
-                final var nextLabelRecord = labels.next();
-
-                final var nextLabel = Double.parseDouble(nextLabelRecord.get(0));
-                final var nextEvent =
-                        new Event(nextEventRecord.get(0), Double.parseDouble(nextEventRecord.get(1)), count);
-
-                windowEvents[i] = nextEvent;
-                windowLabels[i] = nextLabel;
-                count += 1;
-            }
-
-            if(finished) {
-                break;
-            }
-
-            currentMatchesNum = 0;
-
-            for (int i = 0; i < windowSize; i++) {
-                final Event nextEvent = windowEvents[i];
-                final Double nextLabel = windowLabels[i];
-
-                Event eventForUse;
-                if (nextLabel > 0.5) {
-                    eventForUse = nextEvent;
-                } else {
-                    eventForUse = DUMMY_EVENT;
-                }
-
-                runtime.getEventService().sendEventBean(eventForUse, "Event");
-            }
-
-            partition(runtime);
-
-            final int filteringMatches = currentMatchesNum;
-            currentMatchesNum = 0;
-
-            for (int i = 0; i < windowSize; i++) {
-                final Event nextEvent = windowEvents[i];
-                runtime.getEventService().sendEventBean(nextEvent, "Event");
-            }
-
-            partition(runtime);
-
-            final int matches = currentMatchesNum;
-            currentMatchesNum = 0;
-
-            final var windowScore = getWindowScore(matches, filteringMatches, windowLabels);
-            scoresPrinter.printRecord(windowScore);
-
-
-            progress += 1;
-            printProgress(startTime, progress);
-        }
-
-        runtime.destroy();
-        eventsParser.close();
-        labelsParser.close();
-        scoresPrinter.close();
     }
 
     private static void partition(EPRuntime runtime){
