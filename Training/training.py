@@ -8,7 +8,7 @@ from constants import constants
 steps = 1
 event_size = 5
 
-allow_gpu = True
+allow_gpu = False
 dev = "cuda" if allow_gpu and torch.cuda.is_available() else "cpu"
 
 device = torch.device(dev)
@@ -18,8 +18,8 @@ model_path = "training_data/reinforce"
 training_report_path = "training_data/report.txt"
 batch_size = 50
 
-low_match_penalty = 10000
-required_matches_portion = 0.8
+UNFOUND_MATCHES_PENALTY = 1
+REQUIRED_MATCHES_PORTION = 0.8
 
 FULL_WINDOW_COMPLEXITY = \
     2**(constants['pattern_window_size'])*(constants['window_size'] - constants['pattern_window_size'] + 1)
@@ -28,11 +28,6 @@ test_rewards = []
 
 
 def get_batch_matches(M):
-    # try:
-    #     batch = next(M)
-    #     return batch
-    # except (StopIteration, RuntimeError):
-    #     return None
     try:
         batches = []
         for _ in range(batch_size):
@@ -78,17 +73,6 @@ def initialize_data_matches(is_train):
 
 
 epsilon = 1e-9
-# reward_std_sum = 0
-# reward_sum = 0
-# num = 0
-#
-#
-# def normalize_rewards(rewards):
-#     global sum, num
-#     num += batch_size
-#     sum += rewards.sum()
-#
-#     normalized_rewards = (rewards - average) / (std + epsilon) # normalize discounted rewards
 
 matches_sum = 0
 found_matches_sum = 0
@@ -144,9 +128,10 @@ def get_rewards(matches, chosen_events):
             found_matches_portion = found_matches_sum/matches_sum
             return matches_num, found_matches_num
 
-    def unfound_match_penalty():
-        num = (matches_num - filtered_matches_num) if matches_num != 0 else 0
-        return low_match_penalty*(required_matches_portion*num)**3
+    def unfound_match_penalty(matches_ratio):
+        # gap = max(REQUIRED_MATCHES_PORTION * matches_num - found_matches_num, 0)
+        # return UNFOUND_MATCHES_PENALTY * gap
+        return UNFOUND_MATCHES_PENALTY * max(REQUIRED_MATCHES_PORTION - matches_ratio, 0)
 
     rewards = []
     for i in range(batch_size):
@@ -156,13 +141,14 @@ def get_rewards(matches, chosen_events):
         matches_ratio = filtered_matches_num/matches_num if matches_num != 0 else 1
 
         ratio = matches_ratio/window_complexity_ratio
-        penalty = unfound_match_penalty()
+        penalty = unfound_match_penalty(matches_ratio)
 
         reward = ratio - penalty
         rewards.append(reward)
 
     rewards = torch.tensor(rewards)
-    return rewards, (rewards - rewards.mean()) / (rewards.std() + epsilon)
+    # return rewards, (rewards - rewards.mean()) / (rewards.std() + epsilon)
+    return rewards, rewards
 
 
 def net_train(epochs, batch_interval, net, load_path=None):
@@ -244,5 +230,3 @@ def net_test(net):
 
 if __name__ == "__main__":
     net_train(100, 1000, nets.WindowToFiltersReinforce(batch_size))
-
-    # why i am so gay, so gaylad
