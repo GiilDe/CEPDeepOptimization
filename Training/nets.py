@@ -5,8 +5,6 @@ from training import event_size
 from itertools import product
 import numpy as np
 
-batch_size = 32
-
 
 class WindowToFiltersReinforce(nn.Module):
     def __init__(self, batch_size):
@@ -27,21 +25,21 @@ class WindowToFiltersReinforce(nn.Module):
             chosen_events[batch_i, event_i] = torch.tensor(choice).item()
             chosen_events_np[batch_i, event_i] = 1 - choice  # for output reasons: flip choice
 
-        # flipped_probs = torch.abs(chosen_events - events_probs)  # flip unchosen probabilities
-        # windows_probs = torch.prod(flipped_probs, dim=1)
-        # log_prob = torch.log(windows_probs)  # dims: (batch_size, 1)
+        flipped_probs = torch.abs(chosen_events - events_probs)  # flip unchosen probabilities
+        windows_probs = torch.prod(flipped_probs, dim=1)
+        log_probs = torch.log(windows_probs)  # dims: (batch_size, 1)
 
-        log_probs = torch.log(events_probs)
-        masked_log_probs = log_probs * torch.tensor(chosen_events_np).int()
-        log_prob = torch.sum(masked_log_probs, dim=1)
+        # log_probs = torch.log(events_probs)
+        # masked_log_probs = log_probs * torch.tensor(chosen_events_np).int()
+        # log_prob = torch.sum(masked_log_probs, dim=1)
         
-        return chosen_events_np, log_prob
+        return chosen_events_np, log_probs
 
 
 class WindowToFiltersFC(nn.Module):
     def __init__(self, batch_size):
         super(WindowToFiltersFC, self).__init__()
-        fc1 = nn.Linear(event_size*constants['window_size'], 50)
+        fc1 = nn.Linear(constants['event_size']*constants['window_size'], 50)
         b_norm1 = nn.BatchNorm1d(50)
         relu1 = nn.ReLU()
         drop1 = nn.Dropout()

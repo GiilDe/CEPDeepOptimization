@@ -7,9 +7,9 @@
   "test_scores_file_path": "Data/test_scores.txt",
   "test_size": "3000000",
   "train_size": "20000000",
-  "pattern_window_size": "1",
+  "pattern_window_size": "5",
   "window_size": "10",
-  "match_size": "1",
+  "match_size": "2",
   "train_matches": "Data/train_matches.txt",
   "test_matches": "Data/test_matches.txt",
   "event_size": "5"
