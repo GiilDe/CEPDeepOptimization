@@ -15,9 +15,7 @@ class LinearWindowToFilters(nn.Module):
 
     def forward(self, events):
         # events/events_probs dims: (batch_size, window_size)
-        beginning_time = time.time()
         events_probs = self.probs_net(events)
-        finish_time = time.time()
         chosen_events = torch.zeros_like(events_probs)
         chosen_events_np = np.zeros((self.batch_size, constants['window_size']))
 
@@ -36,7 +34,7 @@ class LinearWindowToFilters(nn.Module):
         # masked_log_probs = log_probs * torch.tensor(chosen_events_np).int()
         # log_prob = torch.sum(masked_log_probs, dim=1)
         
-        return chosen_events_np, log_probs, finish_time - beginning_time
+        return chosen_events_np, log_probs
 
 
 class WindowToFiltersFC(nn.Module):

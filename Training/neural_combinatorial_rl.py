@@ -7,7 +7,6 @@ import numpy as np
 from dataset import device
 from constants import constants
 
-finish_time = 0
 
 
 class Encoder(nn.Module):
@@ -131,7 +130,6 @@ class Decoder(nn.Module):
         return logits, maskk
 
     def forward(self, decoder_input, embedded_inputs, hidden, context):
-        global finish_time
         """
         Args:
             decoder_input: The initial input to the decoder
@@ -185,9 +183,6 @@ class Decoder(nn.Module):
 
             idxs = idxs * finished_batches_mask
             finished_batches_mask = finished_batches_mask * idxs.bool().int()
-
-            if finished_batches_mask[0].item() == 0 and finish_time == 0:
-                finish_time = time.time()
 
             decoder_input = embedded_inputs[idxs.data, range(batch_size), :]
             # use outs to point to next object
@@ -391,9 +386,6 @@ class NeuralCombOptNet(nn.Module):
         Args:
             inputs: [batch_size, input_dim, source_length]
         """
-        global finish_time
-        finish_time = 0
-        beginning_time = time.time()
         inputs = inputs.transpose(1, 2)
         batch_size = inputs.size(0)
         # input_dim = inputs.size(1)
@@ -468,4 +460,4 @@ class NeuralCombOptNet(nn.Module):
 
         chosen_events = chosen_events[:, 1:]
         chosen_events = chosen_events.numpy()
-        return chosen_events, log_probs, finish_time - beginning_time
+        return chosen_events, log_probs

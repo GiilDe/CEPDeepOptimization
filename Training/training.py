@@ -119,7 +119,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
 
                 print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch,
                                found_matches_portion, found_matches_portions, log_file, processed_events, rewards,
-                               train_size, duration, net)
+                               train_size)
 
                 processed_events += batch_size
             batch = get_batch_events(X), get_batch_matches(M)
@@ -141,7 +141,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
 
 
 def print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch, found_matches_portion,
-                   found_matches_portions, log_file, processed_events, rewards, size, duration, net):
+                   found_matches_portions, log_file, processed_events, rewards, size):
     if processed_events % batch_interval == 0:
         print("Epoch " + str(epoch) + ": Processed " + str(processed_events) + " out of " +
               str(size) + "\nreward of " + str(rewards.mean().item()) + "\n" +
@@ -150,9 +150,6 @@ def print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, 
               ", chosen events num: " + str(chosen_events_num) + "\n" +
               "matches portion to chosen events = " +
               str(found_matches_portion / (chosen_events_num / constants['window_size'])))
-
-        print("time for inference: " + str(duration) + ((" num of events: " +
-                str(batches_chosen_events_num[0]) + "\n") if type(net) == NeuralCombOptNet else "\n"))
 
         log_file.write("chosen events:\n" + str(batches_chosen_events_num) + "\n")
         log_file.write("found matches portions:\n" + str(found_matches_portions) + "\n")
@@ -213,4 +210,4 @@ if __name__ == "__main__":
         use_cuda=True if dev == "cuda" else False,
         n_process_block_iters=3
     )
-    net_train(100, pointer_net, critic_net=None)
+    net_train(100, linear_model, critic_net=None)
