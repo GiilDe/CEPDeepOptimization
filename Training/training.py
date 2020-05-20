@@ -81,7 +81,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             if steps != 1:
                 print("\n~new batch~\n")
             for _ in range(steps):
-                chosen_events, log_probs, duration = net.forward(x)
+                chosen_events, log_probs = net.forward(x)
 
                 rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion = \
                     get_rewards(m, chosen_events)
