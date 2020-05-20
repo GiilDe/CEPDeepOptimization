@@ -87,10 +87,6 @@ def net_train(epochs, net, load_path=None, critic_net=None):
                     get_rewards(m, chosen_events)
                 chosen_events_num = np.mean(batches_chosen_events_num)
 
-                if type(net) == NeuralCombOptNet:
-                    time_per_event = duration / (batch_size * constants['window_size'])
-                    duration = time_per_event * chosen_events_num
-
                 if critic_net is not None:
                     critic_out = critic_net(x.detach())
                 else:
