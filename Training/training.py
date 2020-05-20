@@ -1,174 +1,56 @@
 import torch
 import torch.functional
 import torch.optim as optim
-import pandas as pd
-import nets
 from constants import constants
-import numpy as np
-import typing
 from torch.optim import lr_scheduler
+from dataset import \
+    dev, device, initialize_data_x, initialize_data_matches, get_batch_events, get_batch_matches, get_rewards, \
+    batch_size, UNFOUND_MATCHES_PENALTY, REQUIRED_MATCHES_PORTION
+import numpy as np
+from neural_combinatorial_rl import NeuralCombOptNet, CriticNetwork
+from nets import LinearWindowToFilters
+
+tanh_exploration = 10
+use_tanh = True
+hidden_dim = 32
 
 steps = 1
-event_size = 5
 
-allow_gpu = True
-dev = "cuda" if allow_gpu and torch.cuda.is_available() else "cpu"
+train_size = int(constants['train_size'] * steps / constants['window_size'])
+test_size = int(constants['test_size'] * steps / constants['window_size'])
 
-device = torch.device(dev)
-
-loss_function_type = torch.nn.MSELoss
 model_path = "training_data/reinforce"
-training_report_path = "training_data/report.txt"
-batch_size = 128
 batch_interval = 1000
 
-batch_interval = int(batch_interval/batch_size) * batch_size
+batch_interval = int(batch_interval / batch_size) * batch_size
 
 beta = 0.9
 decay_step = 5000
 decay_rate = 0.96
 max_grad_norm = 2.0
-learning_rate = 0.0001
+learning_rate_pointer_net = 0.0001
+learning_rate_linear_net = 0.0003
+
+critic_mse = torch.nn.MSELoss()
 
 
-UNFOUND_MATCHES_PENALTY = 0
-REQUIRED_MATCHES_PORTION = 0.8
-
-FULL_WINDOW_COMPLEXITY = \
-    2**(constants['pattern_window_size'])*(constants['window_size'] - constants['pattern_window_size'] + 1)
-
-test_rewards = []
-
-
-def get_batch_matches(M):
-    try:
-        batches = []
-        for _ in range(batch_size):
-            batch = M.readline()
-            if batch == "":
-                raise StopIteration
-            batch = batch.split(",")
-            for i, obj_i in enumerate(batch):
-                batch[i] = int(obj_i)
-            batches.append(batch)
-        return batches
-    except (StopIteration, RuntimeError):
-        return None
-
-
-def get_batch_events(X):
-    def get_dummies(x):
-        padding = pd.DataFrame([['A', -1], ['B', -1], ['C', -1], ['D', -1]])
-        x = padding.append(x, ignore_index=True)
-        x = pd.get_dummies(x)
-        x = x.drop(axis=0, labels=[0, 1, 2, 3])
-        return x
-    try:
-        batch = next(X)
-        batch = get_dummies(batch)
-        batch = torch.tensor(batch.to_numpy(), dtype=torch.float64, requires_grad=True, device=device) \
-            .reshape((batch_size, constants['window_size'], event_size))
-        return batch
-    except (StopIteration, RuntimeError):
-        return None
-
-
-def initialize_data_x(is_train):
-    X = pd.read_csv(constants['train_stream_path'] if is_train else constants['test_stream_path'],
-                    chunksize=batch_size * constants['window_size'], header=None, usecols=[0, 1])
-    return X
-
-
-def initialize_data_matches(is_train):
-    M = open(constants['train_matches'] if is_train else constants['test_matches'], "r")
-    return M
-
-
-matches_sum = 0
-found_matches_sum = 0
-found_matches_portion = 0
-chosen_events_num = 0
-
-
-def get_rewards(matches: typing.List, chosen_events: np.ndarray):
-    global chosen_events_num
-    def get_window_complexity_ratio(i):
-        batch_chosen_events = chosen_events[i]
-        pattern_window_size = constants['pattern_window_size']
-        window_complexity = 0
-        pattern_window_selected = 0
-
-        for i in range(pattern_window_size):
-            pattern_window_selected += batch_chosen_events[i]
-
-        window_complexity += 2**pattern_window_selected
-
-        for i in range(constants['window_size'] - pattern_window_size):
-            pattern_window_selected -= batch_chosen_events[i]
-            pattern_window_selected += batch_chosen_events[i + pattern_window_size]
-            window_complexity += 2**pattern_window_selected
-
-        return window_complexity/FULL_WINDOW_COMPLEXITY
-
-    def get_window_matches(i):
-        global matches_sum, found_matches_sum, found_matches_portion
-        batch_matches = matches[i]
-        batch_chosen_events = chosen_events[i]
-        non_chosen = set()
-        for i in range(constants['window_size']):
-            if batch_chosen_events[i] == 0:
-                non_chosen.add(i)
-        matches_ = []
-        for i in range(0, len(batch_matches), constants['match_size']):
-            if batch_matches[i] == -1:
-                break
-            match = set(batch_matches[i:i + constants['match_size']])
-            matches_.append(match)
-
-        matches_num = len(matches_)
-        filtered = 0
-        for match in matches_:
-            for count in match:
-                if count in non_chosen:
-                    filtered += 1
-                    break
-
-        found_matches_num = matches_num - filtered
-        found_matches_sum += found_matches_num
-        matches_sum += matches_num
-        found_matches_portion = found_matches_sum/matches_sum
-        return matches_num, found_matches_num
-
-    def unfound_match_penalty(matches_ratio):
-        return UNFOUND_MATCHES_PENALTY * max(REQUIRED_MATCHES_PORTION - matches_ratio, 0)
-
-    rewards = []
-    for i in range(batch_size):
-        window_complexity_ratio = max(get_window_complexity_ratio(i), 0.005)
-        matches_num, filtered_matches_num = get_window_matches(i)
-
-        matches_ratio = filtered_matches_num/matches_num if matches_num != 0 else 1
-
-        ratio = matches_ratio/window_complexity_ratio
-        penalty = unfound_match_penalty(matches_ratio)
-
-        reward = ratio - penalty
-        rewards.append(reward)
-
-    rewards = torch.tensor(rewards, device=device)
-    np_sum = np.sum(chosen_events, axis=1)
-    chosen_events_num = np.mean(np_sum)
-    return rewards
-
-
-def net_train(epochs, net, load_path=None):
+def net_train(epochs, net, load_path=None, critic_net=None):
     global test_rewards
-    critic_exp_mvg_avg = torch.zeros(1, device=device)
+    learning_rate = learning_rate_pointer_net if type(net) == NeuralCombOptNet else learning_rate_linear_net
     optimizer = optim.Adam(net.parameters(), lr=learning_rate)
-    actor_scheduler = lr_scheduler.MultiStepLR(optimizer, range(decay_step, decay_step * 1000, decay_step),
-                                               gamma=decay_rate)
+    scheduler = lr_scheduler.MultiStepLR(optimizer, range(decay_step, decay_step * 1000, decay_step), gamma=decay_rate)
+
+    if critic_net is not None:
+        critic_optim = optim.Adam(critic_net.parameters(), lr=learning_rate)
+        critic_scheduler = lr_scheduler.MultiStepLR(critic_optim, range(decay_step, decay_step * 1000, decay_step),
+                                                    gamma=decay_rate)
+    else:
+        critic_exp_mvg_avg = torch.zeros(1, device=device)
+
     epoch = 0
     epochs_rewards = []
+
+    log_file = open(constants['train_log_file'], "w") if load_path is None else open(constants['train_log_file'], "a")
 
     if load_path is not None:
         checkpoint = torch.load(load_path)
@@ -176,6 +58,16 @@ def net_train(epochs, net, load_path=None):
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         epoch = checkpoint['epoch']
         epochs_rewards = checkpoint['rewards']
+
+    details = "starting training with:\n"
+    details += "penalty = " + str(UNFOUND_MATCHES_PENALTY) + "\n"
+    details += "lr = " + str(learning_rate) + "\n"
+    details += "required matches portion = " + str(REQUIRED_MATCHES_PORTION) + "\n"
+    details += "using critic net? " + ("yes" if critic_net is not None else "no (using moving average)") + "\n"
+    details += "using pointer net? " + ("yes" if type(net) == NeuralCombOptNet else "no (using fc net)") + "\n"
+    details += "------------"
+    print(details)
+    log_file.write(details)
 
     net.to(device=device)
     while epoch < epochs:
@@ -186,39 +78,57 @@ def net_train(epochs, net, load_path=None):
         batch = get_batch_events(X), get_batch_matches(M)
         while batch[0] is not None and batch[1] is not None:
             x, m = batch
+            if steps != 1:
+                print("\n~new batch~\n")
             for _ in range(steps):
-                optimizer.zero_grad()
-                chosen_events, log_probs = net.forward(x)
+                chosen_events, log_probs, duration = net.forward(x)
 
-                rewards = get_rewards(m, chosen_events)
+                rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion = \
+                    get_rewards(m, chosen_events)
+                chosen_events_num = np.mean(batches_chosen_events_num)
 
-                if processed_events == 0:
-                    critic_exp_mvg_avg = rewards.mean()
+                if type(net) == NeuralCombOptNet:
+                    time_per_event = duration / (batch_size * constants['window_size'])
+                    duration = time_per_event * chosen_events_num
+
+                if critic_net is not None:
+                    critic_out = critic_net(x.detach())
                 else:
-                    critic_exp_mvg_avg = (critic_exp_mvg_avg * beta) + ((1. - beta) * rewards.mean())
+                    if processed_events == 0:
+                        critic_exp_mvg_avg = rewards.mean()
+                    else:
+                        critic_exp_mvg_avg = (critic_exp_mvg_avg * beta) + ((1. - beta) * rewards.mean())
 
-                rewards_normalized = rewards - critic_exp_mvg_avg
+                normalizer = critic_out if critic_net is not None else critic_exp_mvg_avg
+                advantage = rewards - normalizer
 
-                losses = (-1) * log_probs * rewards_normalized
-                losses.mean().backward()
-
-                # clip gradient norms
+                optimizer.zero_grad()
+                losses = (-1) * log_probs * advantage.detach()
+                losses = losses.mean()
+                losses.backward()
                 torch.nn.utils.clip_grad_norm_(net.parameters(), max_grad_norm, norm_type=2)
-
                 optimizer.step()
-                actor_scheduler.step()
+                scheduler.step()
 
-                critic_exp_mvg_avg = critic_exp_mvg_avg.detach()
+                if critic_net is not None:
+                    rewards = rewards.detach()
+                    critic_optim.zero_grad()
+                    critic_loss = critic_mse(critic_out, rewards)
+                    critic_loss.backward()
+                    torch.nn.utils.clip_grad_norm_(critic_net.parameters(), max_grad_norm, norm_type=2)
+                    critic_optim.step()
+                    critic_scheduler.step()
+                else:
+                    critic_exp_mvg_avg = critic_exp_mvg_avg.detach()
 
-                if processed_events % batch_interval == 0:
-                    print("Epoch " + str(epoch) + ": Processed " + str(processed_events) + " out of "
-                          + str(constants['train_size']*steps/constants['window_size']) + "\nsampled reward of " + str(rewards.mean().item()) + "\n" +
-                          "and chosen events " + str(chosen_events[0]) + "\n" + "found matches portion: "
-                          + str(found_matches_portion) + ", chosen events num: " + str(chosen_events_num))
+                print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch,
+                               found_matches_portion, found_matches_portions, log_file, processed_events, rewards,
+                               train_size, duration, net)
+
                 processed_events += batch_size
-                batch = get_batch_events(X), get_batch_matches(M)
+            batch = get_batch_events(X), get_batch_matches(M)
 
-        epoch_average_reward = epoch_average_reward/(steps*constants['train_size'])
+        epoch_average_reward = epoch_average_reward / (steps * constants['train_size'])
         epochs_rewards.append(epoch_average_reward)
         torch.save({
             'epoch': epoch,
@@ -226,39 +136,85 @@ def net_train(epochs, net, load_path=None):
             'optimizer_state_dict': optimizer.state_dict(),
             'rewards': epochs_rewards,
         }, model_path + "_" + str(epoch))
-        epoch += 1
 
         print("train losses: " + str(epochs_rewards))
-        net_test(net, epoch)
+        net_test(net, epoch, log_file)
         print("test losses: " + str(test_rewards))
 
+        epoch += 1
 
-def net_test(net, epoch):
+
+def print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch, found_matches_portion,
+                   found_matches_portions, log_file, processed_events, rewards, size, duration, net):
+    if processed_events % batch_interval == 0:
+        print("Epoch " + str(epoch) + ": Processed " + str(processed_events) + " out of " +
+              str(size) + "\nreward of " + str(rewards.mean().item()) + "\n" +
+              "sampled chosen events " + str(chosen_events[np.random.choice(range(batch_size))]) + "\n" +
+              "found matches portion: " + str(found_matches_portion) +
+              ", chosen events num: " + str(chosen_events_num) + "\n" +
+              "matches portion to chosen events = " +
+              str(found_matches_portion / (chosen_events_num / constants['window_size'])))
+
+        print("time for inference: " + str(duration) + ((" num of events: " +
+                str(batches_chosen_events_num[0]) + "\n") if type(net) == NeuralCombOptNet else "\n"))
+
+        log_file.write("chosen events:\n" + str(batches_chosen_events_num) + "\n")
+        log_file.write("found matches portions:\n" + str(found_matches_portions) + "\n")
+        log_file.write("rewards:\n" + str(rewards.tolist()) + "\n")
+        log_file.write("average reward: " + str(rewards.mean().item()) + "\n")
+        log_file.write("-------------------\n")
+
+
+test_rewards = []
+
+
+def net_test(net, epoch, log_file):
     global test_rewards
-
     net.to(device=device)
     epoch_average_reward = 0
     X, M = initialize_data_x(False), initialize_data_matches(False)
     net.eval()
     processed_events = 0
+    log_file.write("\n~validation~\n")
+    print("\n~validation~\n")
     x, m = get_batch_events(X), get_batch_matches(M)
     while x is not None and m is not None:
         chosen_events, _ = net.forward(x)
-        rewards = get_rewards(m, chosen_events)
+        rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion = \
+            get_rewards(m, chosen_events)
+        chosen_events_num = np.mean(batches_chosen_events_num)
         epoch_average_reward += rewards.mean().item()
-        if processed_events % batch_interval == 0:
-            print("Epoch " + str(epoch) + ": Processed " + str(processed_events) + " out of "
-                  + str(constants['test_size']/constants['window_size']) + "\nsampled reward of "
-                  + str(rewards.mean().item()) + "\n" +
-                  "and chosen events " + str(chosen_events[0]) + "\n" + "found matches portion: "
-                  + str(found_matches_portion) + ", chosen events num: " + str(chosen_events_num))
+        print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch,
+                       found_matches_portion, found_matches_portions, log_file, processed_events, rewards, test_size)
         processed_events += batch_size
         x, m = get_batch_events(X), get_batch_matches(M)
 
-
-    epoch_average_reward = epoch_average_reward/(constants['test_size'])
+    epoch_average_reward = epoch_average_reward / (constants['test_size'])
     test_rewards.append(epoch_average_reward)
 
 
 if __name__ == "__main__":
-    net_train(100, nets.WindowToFiltersReinforce(batch_size))
+    pointer_net = NeuralCombOptNet(
+        input_dim=constants['event_size'],
+        embedding_dim=None,
+        hidden_dim=hidden_dim,
+        max_decoding_len=constants['window_size'] + 1,
+        n_glimpses=2,
+        tanh_exploration=tanh_exploration,
+        use_tanh=use_tanh,
+        is_train=True,
+        use_cuda=True if dev == "cuda" else False,
+        encoder_bi_directional=False,
+        encoder_num_layers=1,
+        padding_value=-1
+    )
+    linear_model = LinearWindowToFilters(batch_size)
+    network = CriticNetwork(
+        input_dim=constants['event_size'],
+        hidden_dim=hidden_dim,
+        tanh_exploration=tanh_exploration,
+        use_tanh=use_tanh,
+        use_cuda=True if dev == "cuda" else False,
+        n_process_block_iters=3
+    )
+    net_train(100, pointer_net, critic_net=None)

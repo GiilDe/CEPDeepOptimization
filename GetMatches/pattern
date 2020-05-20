@@ -1,0 +1,152 @@
+select *
+from Event#length(5) as a, Event#length(5) as b
+where
+a.count < b.count and
+a.type = 'A' and
+b.type = 'B' and
+a.value < b.value
+done
+
+penalty = 0.05
+required matches portion = 0.5
+using critic net? no (using moving average)
+using pointer net? yes
+learned well
+
+
+select a.id, b.id, c.id, d.id, e.id
+from Event#length(8) as a, Event#length(7) as b, Event#length(6) as c, Event#length(6) as d,
+Event#length(5) as e
+where
+e.count - b.count >= 3 and
+c.count != d.count and
+a.count < b.count and
+b.count < c.count and
+b.count < d.count and
+c.count < e.count and
+d.count < e.count and
+((a.type = 'A' and e.type = 'D') or (a.type = 'B' and e.type = 'A')) and
+b.type != 'B' and
+(c.type = 'C' or c.type = 'A') and
+(d.type = 'D' or d.type = 'A') and
+(a.value + b.value < e.value + d.value)
+done
+SEQ(SEQ(A, B), AND(C, D), E)
+
+
+
+select a.id, b.id, c.id, d.id, e.id
+from Event#length(8) as a, Event#length(7) as b, Event#length(6) as c, Event#length(6) as d, Event#length(5) as e
+where
+e.count - b.count >= 3 and
+c.count != d.count and
+a.count < b.count and
+b.count < c.count and
+b.count < d.count and
+c.count < e.count and
+d.count < e.count and
+((a.type = 'A' and e.type = 'D') or (a.type = 'B' and e.type = 'A')) and
+b.type = 'B' and
+(c.type = 'C' or c.type = 'A') and
+(d.type = 'D' or d.type = 'A') and
+(a.value + b.value < e.value + d.value)
+done
+SEQ(SEQ(A, B), AND(C, D), E) Net learns well
+
+
+select a.id, b.id, c.id, d.id, e.id, f.id
+from Event#length(10) as a, Event#length(9) as b, Event#length(8) as c, Event#length(8) as d,
+Event#length(6) as e, Event#length(6) as f
+where
+c.count != d.count and
+e.count != f.count and
+a.count < b.count and
+b.count < c.count and
+b.count < d.count and
+c.count < e.count and
+d.count < e.count and
+c.count < f.count and
+d.count < f.count and
+((a.type = 'A' and f.type = 'D') or (a.type = 'B' and f.type = 'A')) and
+b.type != 'B' and
+(c.type = 'C' or c.type = 'A') and
+(d.type = 'D' or d.type = 'A') and
+e.type = 'D' and
+(a.value + b.value < e.value + d.value) and
+(c.value + f.value < 0.5)
+done
+SEQ(SEQ(A, B), AND(C, D), AND(E, F)) Net didn't learn
+
+
+select * from Event#length(8) as a, Event#length(8) as b, Event#length(8) as c, Event#length(8) as d, Event#length(8) as e
+where
+a.count < b.count and
+b.count < c.count and
+b.count < d.count and
+c.count < e.count and
+d.count < e.count and
+a.type = 'A' and
+b.type = 'B' and
+c.type = 'C' and
+d.type = 'D' and
+(e.type = 'A' or e.type = 'B')
+done
+SEQ(SEQ(A, B), AND(C, D), E) Net learned well
+
+
+select * from Event#length(11) as a, Event#length(11) as b, Event#length(11) as c, Event#length(8) as d, Event#length(8) as e,
+Event#length(6) as f, Event#length(5) as g
+where
+a.count < d.count and
+a.count < e.count and
+b.count < d.count and
+b.count < e.count and
+c.count < d.count and
+c.count < e.count and
+f.count > d.count and
+f.count > e.count and
+f.count < g.count and
+(a.value + b.value + f.value < e.value + g.value) and
+(c.value + d.value < 1) and
+a.type != 'C' and
+(b.type = 'B' or b.type = 'C') and
+(c.type = 'B' or c.type = 'B') and
+d.type != 'D' and
+e.type != 'D' and
+(f.type = 'B' or f.type = 'C')
+done
+
+
+
+
+
+
+select * from Event
+match_recognize (
+measures A as a, B as b
+after match skip to current row
+pattern (A {1,13}X B)
+)
+done
+
+
+select * from Event
+match_recognize (
+measures A as a, B as b, C as c
+pattern (A C{1,6} B)
+define
+ A as A.type = 'A',
+ B as B.type = 'B',
+ C as C.type != 'A'
+)
+done
+
+select * from pattern[every [2] (a=Event(type='A') and not Event(type='C'))]
+done
+select * from pattern[every Event(type='A') -> every [2:6]Event(type='A')]
+done
+
+
+
+
+

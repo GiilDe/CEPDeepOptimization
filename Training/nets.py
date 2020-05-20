@@ -1,20 +1,23 @@
+import time
+
 import torch
 import torch.nn as nn
 from constants import constants
-from training import event_size
 from itertools import product
 import numpy as np
 
 
-class WindowToFiltersReinforce(nn.Module):
+class LinearWindowToFilters(nn.Module):
     def __init__(self, batch_size):
-        super(WindowToFiltersReinforce, self).__init__()
+        super(LinearWindowToFilters, self).__init__()
         self.probs_net = WindowToFiltersFC(batch_size)
         self.batch_size = batch_size
 
     def forward(self, events):
         # events/events_probs dims: (batch_size, window_size)
+        beginning_time = time.time()
         events_probs = self.probs_net(events)
+        finish_time = time.time()
         chosen_events = torch.zeros_like(events_probs)
         chosen_events_np = np.zeros((self.batch_size, constants['window_size']))
 
@@ -33,28 +36,28 @@ class WindowToFiltersReinforce(nn.Module):
         # masked_log_probs = log_probs * torch.tensor(chosen_events_np).int()
         # log_prob = torch.sum(masked_log_probs, dim=1)
         
-        return chosen_events_np, log_probs
+        return chosen_events_np, log_probs, finish_time - beginning_time
 
 
 class WindowToFiltersFC(nn.Module):
     def __init__(self, batch_size):
         super(WindowToFiltersFC, self).__init__()
-        fc1 = nn.Linear(constants['event_size']*constants['window_size'], 50)
-        b_norm1 = nn.BatchNorm1d(50)
+        fc1 = nn.Linear(constants['event_size'] * constants['window_size'], 110)
+        b_norm1 = nn.BatchNorm1d(110)
         relu1 = nn.ReLU()
         drop1 = nn.Dropout()
-        fc2 = nn.Linear(50, 30)
-        b_norm2 = nn.BatchNorm1d(30)
+        fc2 = nn.Linear(110, 80)
+        b_norm2 = nn.BatchNorm1d(80)
         relu2 = nn.ReLU()
         drop2 = nn.Dropout()
-        fc3 = nn.Linear(30, 20)
-        b_norm3 = nn.BatchNorm1d(20)
+        fc3 = nn.Linear(80, 50)
+        b_norm3 = nn.BatchNorm1d(50)
         relu3 = nn.ReLU()
         drop3 = nn.Dropout()
-        fc4 = nn.Linear(20, 15)
+        fc4 = nn.Linear(50, 35)
         relu4 = nn.ReLU()
         drop4 = nn.Dropout()
-        fc5 = nn.Linear(15, constants['window_size'])
+        fc5 = nn.Linear(35, constants['window_size'])
         sigmoid = nn.Sigmoid()
         modules = [fc1, b_norm1, relu1, fc2, b_norm2, relu2, fc3, b_norm3, relu3, fc4, relu4, fc5, sigmoid]
         self.network = nn.Sequential(*modules)
@@ -64,7 +67,7 @@ class WindowToFiltersFC(nn.Module):
     def forward(self, events):
         # events dimensions: (batch_size, window_size, event_size)
         # output dimensions: (batch_size, window_size)
-        x = events.reshape((self.batch_size, constants['window_size'] * event_size))
+        x = events.reshape((self.batch_size, constants['window_size'] * constants['event_size']))
         return self.network(x)
 
 
