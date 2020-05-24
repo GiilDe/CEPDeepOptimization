@@ -3,13 +3,12 @@ import torch.functional
 import torch.optim as optim
 from constants import constants
 from torch.optim import lr_scheduler
-from dataset import \
-    dev, device, initialize_data_x, initialize_data_matches, get_batch_events, get_batch_matches, get_rewards, \
-    batch_size, UNFOUND_MATCHES_PENALTY, REQUIRED_MATCHES_PORTION
+from dataset import *
 import numpy as np
 from neural_combinatorial_rl import NeuralCombOptNet, CriticNetwork
 from nets import *
 
+use_time_ratio = True
 tanh_exploration = 10
 use_tanh = True
 hidden_dim = 64
@@ -82,20 +81,26 @@ def net_train(epochs, net, load_path=None, critic_net=None):
     while epoch < epochs:
         epoch_average_reward = 0
         X, M = initialize_data_x(True), initialize_data_matches(True)
+        if use_time_ratio:
+            E = initialize_data_x(True)
         net.train()
         processed_events = 0
-        batch = get_batch_events(X), get_batch_matches(M)
+        if not use_time_ratio:
+            batch = get_batch_events(X), get_batch_matches(M)
+        else:
+            batch = get_batch_events(X), get_batch_matches(M), get_batch_events_as_events(E)
         while batch[0] is not None and batch[1] is not None:
-            x, m = batch
+            if not use_time_ratio:
+                x, m = batch
+            else:
+                x, m, e = batch
             if steps != 1:
                 print("\n~new batch~\n")
             for _ in range(steps):
                 chosen_events, log_probs = net.forward(x)
-
-                rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion = \
-                    get_rewards(m, chosen_events)
+                rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion, denominator = \
+                    get_rewards(m, chosen_events, e if use_time_ratio else None)
                 chosen_events_num = np.mean(batches_chosen_events_num)
-
                 if critic_net is not None:
                     critic_out = critic_net(x.detach())
                 else:
@@ -128,10 +133,13 @@ def net_train(epochs, net, load_path=None, critic_net=None):
 
                 print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch,
                                found_matches_portion, found_matches_portions, log_file, processed_events, rewards,
-                               train_size)
+                               train_size, denominator)
 
                 processed_events += batch_size
-            batch = get_batch_events(X), get_batch_matches(M)
+            if not use_time_ratio:
+                batch = get_batch_events(X), get_batch_matches(M)
+            else:
+                batch = get_batch_events(X), get_batch_matches(M), get_batch_events_as_events(E)
 
         epoch_average_reward = epoch_average_reward / (steps * constants['train_size'])
         epochs_rewards.append(epoch_average_reward)
@@ -150,7 +158,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
 
 
 def print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch, found_matches_portion,
-                   found_matches_portions, log_file, processed_events, rewards, size, is_validation=False):
+                   found_matches_portions, log_file, processed_events, rewards, size, denominator, is_validation=False):
     if processed_events % batch_interval == 0:
         if not is_validation:
             print("Epoch " + str(epoch) + ": Processed " + str(processed_events) + " out of " +
@@ -164,6 +172,7 @@ def print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, 
               ", chosen events num: " + str(chosen_events_num))
         print("matches portion to chosen events = " +
               str(found_matches_portion / (chosen_events_num / constants['window_size'])))
+        print("time metric portion = " + str(denominator))
 
         log_file.write("chosen events:\n" + str(batches_chosen_events_num) + "\n")
         log_file.write("found matches portions:\n" + str(found_matches_portions) + "\n")
@@ -189,12 +198,13 @@ def net_test(net, epoch, log_file):
     x, m = get_batch_events(X), get_batch_matches(M)
     while x is not None and m is not None:
         chosen_events, _ = net.forward(x)
-        rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion = \
+        rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion, denominator = \
             get_rewards(m, chosen_events)
         chosen_events_num = np.mean(batches_chosen_events_num)
         epoch_average_reward += rewards.mean().item()
         print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch,
-                       found_matches_portion, found_matches_portions, log_file, processed_events, rewards, test_size)
+                       found_matches_portion, found_matches_portions, log_file, processed_events, rewards,
+                       test_size, denominator)
         processed_events += batch_size
         x, m = get_batch_events(X), get_batch_matches(M)
 

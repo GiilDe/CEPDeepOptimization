@@ -3,6 +3,7 @@ import torch
 import pandas as pd
 import numpy as np
 import typing
+import OpenCEP
 
 allow_gpu = True
 dev = "cuda" if allow_gpu and torch.cuda.is_available() else "cpu"
@@ -70,7 +71,25 @@ def initialize_data_matches(is_train):
     return M
 
 
-def get_rewards(matches: typing.List, chosen_events: np.ndarray):
+def condition1(A: OpenCEP.processing_utilities.Event, B: OpenCEP.processing_utilities.Event) -> bool:
+    return A.value < B.value
+
+
+condition = OpenCEP.processing_utilities.Condition(condition1, [0, 1])
+
+event_types = ['A', 'B']
+event_types_with_identifiers = \
+    [OpenCEP.processing_utilities.EventTypeOrPatternAndIdentifier(type, i) for i, type in enumerate(event_types)]
+seq_event_pattern = OpenCEP.processing_utilities.\
+    EventPattern(event_types_with_identifiers, OpenCEP.processing_utilities.Seq(range(len(event_types))))
+seq_pattern_query = OpenCEP.processing_utilities.\
+    CleanPatternQuery(seq_event_pattern, [condition], time_limit=constants['pattern_window_size'])
+
+cep_processor = OpenCEP.processor.TimeCalcProcessor(['count', 'type', 'value'], 0, 1, [seq_pattern_query])
+
+
+def get_rewards(matches: typing.List, chosen_events: np.ndarray,
+                window_events: typing.Union[None, pd.DataFrame] = None):
 
     def get_window_complexity_ratio(i):
         batch_chosen_events = chosen_events[i]
@@ -87,6 +106,16 @@ def get_rewards(matches: typing.List, chosen_events: np.ndarray):
         return window_complexity/FULL_WINDOW_COMPLEXITY
         # batch_chosen_events_num = np.sum(batch_chosen_events)
         # return max(batch_chosen_events_num, 1)/constants['window_size']
+
+    def get_window_time_ratio(i):
+        batch_chosen_events = chosen_events[i]
+        batch_events = window_events.iloc[i*constants['window_size']:(i+1)*constants['window_size']]
+        filtered_batch_events = batch_events.iloc[batch_chosen_events.astype(bool)]
+        filtered_window = filtered_batch_events.to_string(header=False).replace("  ", ",").replace(" ", "")
+        window = batch_events.to_string(header=False).replace("  ", ",").replace(" ", "")
+        filtered_time = cep_processor.query(filtered_window)
+        whole_time = cep_processor.query(window)
+        return filtered_time/whole_time
 
     def get_window_matches(i):
         batch_matches = matches[i]
@@ -120,9 +149,11 @@ def get_rewards(matches: typing.List, chosen_events: np.ndarray):
     rewards = []
     matches_sum = 0
     found_matches_sum = 0
+    denominator = 0
     for i in range(batch_size):
         # window_complexity_ratio = max(get_window_complexity_ratio(i), 0.005)
         window_complexity_ratio = get_window_complexity_ratio(i)
+        denominator += window_complexity_ratio
         matches_num, found_matches_num = get_window_matches(i)
         matches_sum += matches_num
         found_matches_sum += found_matches_num
@@ -138,4 +169,5 @@ def get_rewards(matches: typing.List, chosen_events: np.ndarray):
     rewards = torch.tensor(rewards, device=device)
     chosen_events_num = np.sum(chosen_events, axis=1)
     actual_found_matches_portion = found_matches_sum/matches_sum
-    return rewards, chosen_events_num, found_matches_portions, actual_found_matches_portion
+    denominator = denominator/batch_size
+    return rewards, chosen_events_num, found_matches_portions, actual_found_matches_portion, denominator
