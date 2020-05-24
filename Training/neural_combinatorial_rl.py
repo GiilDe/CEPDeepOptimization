@@ -8,7 +8,6 @@ from dataset import device
 from constants import constants
 
 
-
 class Encoder(nn.Module):
     """Maps a graph represented as an input sequence
     to a hidden vector"""
@@ -123,6 +122,7 @@ class Decoder(nn.Module):
         if prev_idxs is not None:
             # set most recently selected idx values to 1
             maskk[range(logits.size(0)), prev_idxs.data] = 1
+            # maskk[[x for x in range(logits.size(0))], prev_idxs.data] = 1
             # since the first element can be reused never zero the first prob to avoid future nans
             maskk[range(logits.size(0)), torch.zeros_like(prev_idxs)] = 0
             logits[maskk] = -np.inf

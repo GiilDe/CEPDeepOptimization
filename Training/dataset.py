@@ -11,8 +11,8 @@ device = torch.device(dev)
 
 batch_size = 128
 
-UNFOUND_MATCHES_PENALTY = 0.05
-REQUIRED_MATCHES_PORTION = 0.5
+UNFOUND_MATCHES_PENALTY = 3
+REQUIRED_MATCHES_PORTION = 0.6
 
 FULL_WINDOW_COMPLEXITY = \
     2**(constants['pattern_window_size'])*(constants['window_size'] - constants['pattern_window_size'] + 1)
@@ -51,6 +51,14 @@ def get_batch_events(X):
         return None
 
 
+def get_batch_events_as_events(X):
+    try:
+        batch = next(X)
+        return batch
+    except StopIteration:
+        return None
+
+
 def initialize_data_x(is_train):
     X = pd.read_csv(constants['train_stream_path'] if is_train else constants['test_stream_path'],
                     chunksize=batch_size * constants['window_size'], header=None, usecols=[0, 1])
@@ -66,23 +74,19 @@ def get_rewards(matches: typing.List, chosen_events: np.ndarray):
 
     def get_window_complexity_ratio(i):
         batch_chosen_events = chosen_events[i]
-        # pattern_window_size = constants['pattern_window_size']
-        # window_complexity = 0
-        # pattern_window_selected = 0
-        #
-        # for i in range(pattern_window_size):
-        #     pattern_window_selected += batch_chosen_events[i]
-        #
-        # window_complexity += 2**pattern_window_selected
-        #
-        # for i in range(constants['window_size'] - pattern_window_size):
-        #     pattern_window_selected -= batch_chosen_events[i]
-        #     pattern_window_selected += batch_chosen_events[i + pattern_window_size]
-        #     window_complexity += 2**pattern_window_selected
-        #
-        # return window_complexity/FULL_WINDOW_COMPLEXITY
-        batch_chosen_events_num = np.sum(batch_chosen_events)
-        return max(batch_chosen_events_num, 1)/constants['window_size']
+        pattern_window_size = constants['pattern_window_size']
+
+        pattern_window_selected = np.sum(batch_chosen_events[:pattern_window_size])
+        window_complexity = 2**pattern_window_selected
+
+        for i in range(pattern_window_size, constants['window_size']):
+            pattern_window_selected -= batch_chosen_events[i - pattern_window_size]
+            pattern_window_selected += batch_chosen_events[i]
+            window_complexity += 2**pattern_window_selected
+
+        return window_complexity/FULL_WINDOW_COMPLEXITY
+        # batch_chosen_events_num = np.sum(batch_chosen_events)
+        # return max(batch_chosen_events_num, 1)/constants['window_size']
 
     def get_window_matches(i):
         batch_matches = matches[i]

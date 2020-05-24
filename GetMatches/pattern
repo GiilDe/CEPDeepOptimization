@@ -7,11 +7,30 @@ b.type = 'B' and
 a.value < b.value
 done
 
-penalty = 0.05
-required matches portion = 0.5
+penalty = 3
+lr = 0.0001
+required matches portion = 0.6
 using critic net? no (using moving average)
-using pointer net? yes
-learned well
+net type: <class 'neural_combinatorial_rl.NeuralCombOptNet'>
+steps = 1
+learned perfectly
+
+penalty = 1
+lr = 0.0002
+required matches portion = 0.6
+using critic net? no (using moving average)
+net type: <class 'nets.ConvWindowToFilters'>
+steps = 1000
+seems to learn well but converges to few match finding (~0.3)
+
+penalty = 3
+lr = 0.0002
+required matches portion = 0.6
+using critic net? no (using moving average)
+net type: <class 'nets.ConvWindowToFilters'>
+steps = 1
+learned well (wait after net chooses all events)
+
 
 
 select a.id, b.id, c.id, d.id, e.id

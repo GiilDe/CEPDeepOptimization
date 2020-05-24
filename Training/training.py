@@ -8,11 +8,11 @@ from dataset import \
     batch_size, UNFOUND_MATCHES_PENALTY, REQUIRED_MATCHES_PORTION
 import numpy as np
 from neural_combinatorial_rl import NeuralCombOptNet, CriticNetwork
-from nets import LinearWindowToFilters
+from nets import *
 
 tanh_exploration = 10
 use_tanh = True
-hidden_dim = 32
+hidden_dim = 64
 
 steps = 1
 
@@ -28,17 +28,25 @@ beta = 0.9
 decay_step = 5000
 decay_rate = 0.96
 max_grad_norm = 2.0
-learning_rate_pointer_net = 0.0001
-learning_rate_linear_net = 0.0003
 
 critic_mse = torch.nn.MSELoss()
 
 
+def get_pointer_net_optimizer(net):
+    lr = 0.0001
+    return optim.Adam(net.parameters(), lr=lr), lr
+
+
+def get_linear_net_optimizer(net):
+    lr = 0.0002
+    return optim.Adam(net.parameters(), lr=lr), lr
+
+
 def net_train(epochs, net, load_path=None, critic_net=None):
     global test_rewards
-    learning_rate = learning_rate_pointer_net if type(net) == NeuralCombOptNet else learning_rate_linear_net
-    optimizer = optim.Adam(net.parameters(), lr=learning_rate)
-    scheduler = lr_scheduler.MultiStepLR(optimizer, range(decay_step, decay_step * 1000, decay_step), gamma=decay_rate)
+    optimizer, learning_rate = get_pointer_net_optimizer(net) if type(net) == NeuralCombOptNet else \
+        get_linear_net_optimizer(net)
+    # scheduler = lr_scheduler.MultiStepLR(optimizer, range(decay_step, decay_step * 1000, decay_step), gamma=decay_rate)
 
     if critic_net is not None:
         critic_optim = optim.Adam(critic_net.parameters(), lr=learning_rate)
@@ -64,7 +72,8 @@ def net_train(epochs, net, load_path=None, critic_net=None):
     details += "lr = " + str(learning_rate) + "\n"
     details += "required matches portion = " + str(REQUIRED_MATCHES_PORTION) + "\n"
     details += "using critic net? " + ("yes" if critic_net is not None else "no (using moving average)") + "\n"
-    details += "using pointer net? " + ("yes" if type(net) == NeuralCombOptNet else "no (using fc net)") + "\n"
+    details += "net type: " + str(type(net)) + "\n"
+    details += "steps = " + str(steps) + "\n"
     details += "------------"
     print(details)
     log_file.write(details)
@@ -104,7 +113,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
                 losses.backward()
                 torch.nn.utils.clip_grad_norm_(net.parameters(), max_grad_norm, norm_type=2)
                 optimizer.step()
-                scheduler.step()
+                # scheduler.step()
 
                 if critic_net is not None:
                     rewards = rewards.detach()
@@ -141,20 +150,27 @@ def net_train(epochs, net, load_path=None, critic_net=None):
 
 
 def print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch, found_matches_portion,
-                   found_matches_portions, log_file, processed_events, rewards, size):
+                   found_matches_portions, log_file, processed_events, rewards, size, is_validation=False):
     if processed_events % batch_interval == 0:
-        print("Epoch " + str(epoch) + ": Processed " + str(processed_events) + " out of " +
-              str(size) + "\nreward of " + str(rewards.mean().item()) + "\n" +
-              "sampled chosen events " + str(chosen_events[np.random.choice(range(batch_size))]) + "\n" +
-              "found matches portion: " + str(found_matches_portion) +
-              ", chosen events num: " + str(chosen_events_num) + "\n" +
-              "matches portion to chosen events = " +
+        if not is_validation:
+            print("Epoch " + str(epoch) + ": Processed " + str(processed_events) + " out of " +
+                str(size))
+        else:
+            print("~Validation~ epoch " + str(epoch) + ": Processed " + str(processed_events) + " out of " +
+                  str(size))
+        print("average reward: " + str(rewards.mean().item()))
+        print("sampled chosen events " + str(chosen_events[np.random.choice(range(batch_size))]))
+        print("found matches portion: " + str(found_matches_portion) +
+              ", chosen events num: " + str(chosen_events_num))
+        print("matches portion to chosen events = " +
               str(found_matches_portion / (chosen_events_num / constants['window_size'])))
 
         log_file.write("chosen events:\n" + str(batches_chosen_events_num) + "\n")
         log_file.write("found matches portions:\n" + str(found_matches_portions) + "\n")
         log_file.write("rewards:\n" + str(rewards.tolist()) + "\n")
         log_file.write("average reward: " + str(rewards.mean().item()) + "\n")
+        log_file.write("matches portion to chosen events = " +
+                       str(found_matches_portion / (chosen_events_num / constants['window_size'])))
         log_file.write("-------------------\n")
 
 
@@ -210,4 +226,5 @@ if __name__ == "__main__":
         use_cuda=True if dev == "cuda" else False,
         n_process_block_iters=3
     )
-    net_train(100, linear_model, critic_net=None)
+    conv_model = ConvWindowToFilters(batch_size, False)
+    net_train(100, conv_model, critic_net=None)
