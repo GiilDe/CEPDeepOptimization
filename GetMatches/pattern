@@ -1,4 +1,29 @@
 select *
+from Event#length(100) as a1,
+Event#length(100) as a2,
+Event#length(100) as a3,
+Event#length(100) as a4,
+Event#length(100) as a5
+where
+a1.count < a2.count and
+a2.count < a3.count and
+a3.count < a4.count and
+a4.count < a5.count and
+a1.type = 'A' and
+a2.type = 'B' and
+a3.type = 'C' and
+a4.type = 'D' and
+a5.type = 'E' and
+a2.value < a3.value and
+2*(a4.value + a2.value + a1.value) < a5.value and
+a1.value < a2.value and
+a4.value < a1.value
+done
+
+
+
+
+select *
 from Event#length(5) as a, Event#length(5) as b
 where
 a.count < b.count and

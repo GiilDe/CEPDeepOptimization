@@ -1,17 +1,13 @@
 {
   "train_stream_path": "Data/train_data_stream.txt",
   "test_stream_path": "Data/test_data_stream.txt",
-  "train_filters_file_path": "Data/train_labels.txt",
-  "test_filters_file_path": "Data/test_labels.txt",
-  "train_scores_file_path": "Data/train_scores.txt",
-  "test_scores_file_path": "Data/test_scores.txt",
   "train_log_file": "Training/training_data/train_log_file.txt",
-  "test_size": "3000000",
-  "train_size": "20000000",
-  "pattern_window_size": "5",
-  "window_size": "30",
-  "match_size": "2",
   "train_matches": "Data/train_matches.txt",
   "test_matches": "Data/test_matches.txt",
-  "event_size": "5"
+  "test_size": "2000000",
+  "train_size": "20000000",
+  "pattern_window_size": "100",
+  "window_size": "250",
+  "match_size": "5",
+  "event_size": "2"
 }

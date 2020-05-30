@@ -23,14 +23,9 @@ public class Main {
 
     public static final String PATTERN = "GetMatches/pattern";
 
-    static int toPrintTime = 10000;
-
     public static JSONObject CONSTANTS;
 
     public static final String JSON_PATH = "Data/constants.json";
-
-    final static String STATEMENT_NAME = "s";
-
 
     static {
         JSONParser parser = new JSONParser();
@@ -40,6 +35,13 @@ public class Main {
             e.printStackTrace();
         }
     }
+
+
+    final static String STATEMENT_NAME = "s";
+
+    static final int windowSize = Integer.parseInt((String) CONSTANTS.get("window_size"));
+
+    static final int toPrintTime = windowSize;
 
     static int MATCH_SIZE = Integer.parseInt((String) CONSTANTS.get("match_size"));
 
@@ -68,7 +70,6 @@ public class Main {
         }
     };
 
-
     public static final Event DUMMY_EVENT = new Event("-1", -1, -1);
 
     public static void main(String[] s) {
@@ -93,7 +94,6 @@ public class Main {
 
         Iterator<CSVRecord> events = eventsParser.iterator();
 
-        final int windowSize = Integer.parseInt((String) CONSTANTS.get("window_size"));
         boolean finished = false;
         int progress = 0;
         while (true) {
@@ -139,7 +139,7 @@ public class Main {
             currentMatches.clear();
             partition(runtime);
 
-            progress += 1;
+            progress += windowSize;
             printProgress(startTime, progress);
         }
 
@@ -158,11 +158,8 @@ public class Main {
     }
 
     private static void printProgress(long startTime, int count) {
-        if(count % 1000 == 0){
-            System.out.println(count);
-        }
-
         if(count % toPrintTime == 0){
+            System.out.println(count);
             long currentTime = System.currentTimeMillis();
             double secPassed = ((double)(currentTime - startTime))/1000;
             double minPassed = secPassed/60;

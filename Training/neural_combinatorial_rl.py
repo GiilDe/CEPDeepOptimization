@@ -1,10 +1,8 @@
-import time
-
 import torch
 import torch.nn as nn
 import math
 import numpy as np
-from dataset import device
+import dataset
 from constants import constants
 
 
@@ -353,7 +351,7 @@ class NeuralCombOptNet(nn.Module):
         self.use_cuda = use_cuda
 
         self.actor_net = PointerNetwork(
-            embedding_dim if embedding_dim != None else input_dim,
+            embedding_dim if embedding_dim is not None else input_dim,
             hidden_dim,
             max_decoding_len,
             n_glimpses,
@@ -440,9 +438,9 @@ class NeuralCombOptNet(nn.Module):
 
         # return v, probs, actions, actions_idxs
 
-        log_probs = torch.zeros_like(probs[0], device=device)
+        log_probs = torch.zeros_like(probs[0], device=dataset.device)
 
-        finished_batches_mask = torch.ones_like(probs[0], device=device).int()
+        finished_batches_mask = torch.ones_like(probs[0], device=dataset.device).int()
 
         for prob, idxs in zip(probs, actions_idxs):
             # compute the sum of the log probs

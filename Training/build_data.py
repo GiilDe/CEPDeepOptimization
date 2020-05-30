@@ -5,21 +5,21 @@ import shutil
 
 
 def build_data_stream():
-    types = ['A', 'A', 'A', 'B', 'B', 'C', 'D']
-    chunk_size = 10**4
-    for size, path in zip([constants.train_size, constants.test_size], [constants.train_file_path, constants.test_size]):
+    types = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+    for size, path in zip([constants['train_size'], constants['test_size']],
+                          [constants['train_stream_path'], constants['test_stream_path']]):
+        file = open(path, "w")
         counter = 0
-        i = 0
-        chunk = pd.DataFrame()
         for _ in range(size):
             name = str(random.choice(types))
-            value = random.random()
+            value = str(random.random())
             s_counter = str(counter)
-            chunk.append(pd.Series(data=[name, value, s_counter]))
-            if i % chunk_size:
-                chunk.to_csv(path, index=False, header=False, mode='a')
-                chunk = pd.DataFrame()
+            event = ','.join([name, value, s_counter]) + "\n"
+            file.write(event)
+            if counter % 1000 == 0:
+                print(str(counter))
             counter += 1
+        file.close()
 
 
 def pad_matches():
@@ -66,4 +66,4 @@ def pad_matches():
 
 
 if __name__ == "__main__":
-    pad_matches()
+    build_data_stream()

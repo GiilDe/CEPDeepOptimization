@@ -3,7 +3,7 @@ import torch.functional
 import torch.optim as optim
 from constants import constants
 from torch.optim import lr_scheduler
-from dataset import *
+import dataset
 import numpy as np
 from neural_combinatorial_rl import NeuralCombOptNet, CriticNetwork
 from nets import *
@@ -21,7 +21,7 @@ test_size = int(constants['test_size'] * steps / constants['window_size'])
 model_path = "training_data/reinforce"
 batch_interval = 1000
 
-batch_interval = int(batch_interval / batch_size) * batch_size
+batch_interval = int(batch_interval / dataset.batch_size) * dataset.batch_size
 
 beta = 0.9
 decay_step = 5000
@@ -52,7 +52,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
         critic_scheduler = lr_scheduler.MultiStepLR(critic_optim, range(decay_step, decay_step * 1000, decay_step),
                                                     gamma=decay_rate)
     else:
-        critic_exp_mvg_avg = torch.zeros(1, device=device)
+        critic_exp_mvg_avg = torch.zeros(1, device=dataset.device)
 
     epoch = 0
     epochs_rewards = []
@@ -67,28 +67,29 @@ def net_train(epochs, net, load_path=None, critic_net=None):
         epochs_rewards = checkpoint['rewards']
 
     details = "starting training with:\n"
-    details += "penalty = " + str(UNFOUND_MATCHES_PENALTY) + "\n"
+    details += "penalty = " + str(dataset.UNFOUND_MATCHES_PENALTY) + "\n"
     details += "lr = " + str(learning_rate) + "\n"
-    details += "required matches portion = " + str(REQUIRED_MATCHES_PORTION) + "\n"
+    details += "required matches portion = " + str(dataset.REQUIRED_MATCHES_PORTION) + "\n"
     details += "using critic net? " + ("yes" if critic_net is not None else "no (using moving average)") + "\n"
     details += "net type: " + str(type(net)) + "\n"
     details += "steps = " + str(steps) + "\n"
+    details += "time calculation: " + dataset.time_calc_types[dataset.time_calc_index] + "\n"
     details += "------------"
     print(details)
     log_file.write(details)
 
-    net.to(device=device)
+    net.to(device=dataset.device)
     while epoch < epochs:
         epoch_average_reward = 0
-        X, M = initialize_data_x(True), initialize_data_matches(True)
+        X, M = dataset.initialize_data_x(True), dataset.initialize_data_matches(True)
         if use_time_ratio:
-            E = initialize_data_x(True)
+            E = dataset.initialize_data_x(True)
         net.train()
         processed_events = 0
         if not use_time_ratio:
-            batch = get_batch_events(X), get_batch_matches(M)
+            batch = dataset.get_batch_events(X), dataset.get_batch_matches(M)
         else:
-            batch = get_batch_events(X), get_batch_matches(M), get_batch_events_as_events(E)
+            batch = dataset.get_batch_events(X), dataset.get_batch_matches(M), dataset.get_batch_events_as_events(E)
         while batch[0] is not None and batch[1] is not None:
             if not use_time_ratio:
                 x, m = batch
@@ -99,7 +100,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             for _ in range(steps):
                 chosen_events, log_probs = net.forward(x)
                 rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion, denominator = \
-                    get_rewards(m, chosen_events, e if use_time_ratio else None)
+                    dataset.get_rewards(m, chosen_events, e if use_time_ratio else None)
                 chosen_events_num = np.mean(batches_chosen_events_num)
                 if critic_net is not None:
                     critic_out = critic_net(x.detach())
@@ -135,11 +136,11 @@ def net_train(epochs, net, load_path=None, critic_net=None):
                                found_matches_portion, found_matches_portions, log_file, processed_events, rewards,
                                train_size, denominator)
 
-                processed_events += batch_size
+                processed_events += dataset.batch_size
             if not use_time_ratio:
-                batch = get_batch_events(X), get_batch_matches(M)
+                batch = dataset.get_batch_events(X), dataset.get_batch_matches(M)
             else:
-                batch = get_batch_events(X), get_batch_matches(M), get_batch_events_as_events(E)
+                batch = dataset.get_batch_events(X), dataset.get_batch_matches(M), dataset.get_batch_events_as_events(E)
 
         epoch_average_reward = epoch_average_reward / (steps * constants['train_size'])
         epochs_rewards.append(epoch_average_reward)
@@ -162,12 +163,12 @@ def print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, 
     if processed_events % batch_interval == 0:
         if not is_validation:
             print("Epoch " + str(epoch) + ": Processed " + str(processed_events) + " out of " +
-                str(size))
+                  str(size))
         else:
             print("~Validation~ epoch " + str(epoch) + ": Processed " + str(processed_events) + " out of " +
                   str(size))
         print("average reward: " + str(rewards.mean().item()))
-        print("sampled chosen events " + str(chosen_events[np.random.choice(range(batch_size))]))
+        print("sampled chosen events " + str(chosen_events[np.random.choice(range(dataset.batch_size))]))
         print("found matches portion: " + str(found_matches_portion) +
               ", chosen events num: " + str(chosen_events_num))
         print("matches portion to chosen events = " +
@@ -188,25 +189,37 @@ test_rewards = []
 
 def net_test(net, epoch, log_file):
     global test_rewards
-    net.to(device=device)
+    net.to(device=dataset.device)
     epoch_average_reward = 0
-    X, M = initialize_data_x(False), initialize_data_matches(False)
+    X, M = dataset.initialize_data_x(False), dataset.initialize_data_matches(False)
+    if use_time_ratio:
+        E = dataset.initialize_data_x(False)
     net.eval()
     processed_events = 0
     log_file.write("\n~validation~\n")
     print("\n~validation~\n")
-    x, m = get_batch_events(X), get_batch_matches(M)
-    while x is not None and m is not None:
+    if not use_time_ratio:
+        batch = dataset.get_batch_events(X), dataset.get_batch_matches(M)
+    else:
+        batch = dataset.get_batch_events(X), dataset.get_batch_matches(M), dataset.get_batch_events_as_events(E)
+    while batch[0] is not None and batch[1] is not None:
+        if not use_time_ratio:
+            x, m = batch
+        else:
+            x, m, e = batch
         chosen_events, _ = net.forward(x)
         rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion, denominator = \
-            get_rewards(m, chosen_events)
+            dataset.get_rewards(m, chosen_events, e if use_time_ratio else None)
         chosen_events_num = np.mean(batches_chosen_events_num)
         epoch_average_reward += rewards.mean().item()
         print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch,
                        found_matches_portion, found_matches_portions, log_file, processed_events, rewards,
                        test_size, denominator)
-        processed_events += batch_size
-        x, m = get_batch_events(X), get_batch_matches(M)
+        processed_events += dataset.batch_size
+        if not use_time_ratio:
+            batch = dataset.get_batch_events(X), dataset.get_batch_matches(M)
+        else:
+            batch = dataset.get_batch_events(X), dataset.get_batch_matches(M), dataset.get_batch_events_as_events(E)
 
     epoch_average_reward = epoch_average_reward / (constants['test_size'])
     test_rewards.append(epoch_average_reward)
@@ -222,19 +235,19 @@ if __name__ == "__main__":
         tanh_exploration=tanh_exploration,
         use_tanh=use_tanh,
         is_train=True,
-        use_cuda=True if dev == "cuda" else False,
+        use_cuda=True if dataset.dev == "cuda" else False,
         encoder_bi_directional=False,
         encoder_num_layers=1,
         padding_value=-1
     )
-    linear_model = LinearWindowToFilters(batch_size)
+    linear_model = LinearWindowToFilters(dataset.batch_size)
     network = CriticNetwork(
         input_dim=constants['event_size'],
         hidden_dim=hidden_dim,
         tanh_exploration=tanh_exploration,
         use_tanh=use_tanh,
-        use_cuda=True if dev == "cuda" else False,
+        use_cuda=True if dataset.dev == "cuda" else False,
         n_process_block_iters=3
     )
-    conv_model = ConvWindowToFilters(batch_size, False)
+    conv_model = ConvWindowToFilters(dataset.batch_size, False)
     net_train(100, conv_model, critic_net=None)
