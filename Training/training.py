@@ -8,7 +8,7 @@ import numpy as np
 from neural_combinatorial_rl import NeuralCombOptNet, CriticNetwork
 from nets import *
 
-use_time_ratio = True
+use_time_ratio = False
 tanh_exploration = 10
 use_tanh = True
 hidden_dim = 64
@@ -87,9 +87,10 @@ def net_train(epochs, net, load_path=None, critic_net=None):
         net.train()
         processed_events = 0
         if not use_time_ratio:
-            batch = dataset.get_batch_events(X), dataset.get_batch_matches(M)
+            batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M)
         else:
-            batch = dataset.get_batch_events(X), dataset.get_batch_matches(M), dataset.get_batch_events_as_events(E)
+            batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), \
+                    dataset.get_batch_events_as_events(E)
         while batch[0] is not None and batch[1] is not None:
             if not use_time_ratio:
                 x, m = batch
@@ -138,9 +139,9 @@ def net_train(epochs, net, load_path=None, critic_net=None):
 
                 processed_events += dataset.batch_size
             if not use_time_ratio:
-                batch = dataset.get_batch_events(X), dataset.get_batch_matches(M)
+                batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M)
             else:
-                batch = dataset.get_batch_events(X), dataset.get_batch_matches(M), dataset.get_batch_events_as_events(E)
+                batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), dataset.get_batch_events_as_events(E)
 
         epoch_average_reward = epoch_average_reward / (steps * constants['train_size'])
         epochs_rewards.append(epoch_average_reward)
@@ -199,9 +200,9 @@ def net_test(net, epoch, log_file):
     log_file.write("\n~validation~\n")
     print("\n~validation~\n")
     if not use_time_ratio:
-        batch = dataset.get_batch_events(X), dataset.get_batch_matches(M)
+        batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M)
     else:
-        batch = dataset.get_batch_events(X), dataset.get_batch_matches(M), dataset.get_batch_events_as_events(E)
+        batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), dataset.get_batch_events_as_events(E)
     while batch[0] is not None and batch[1] is not None:
         if not use_time_ratio:
             x, m = batch
@@ -217,9 +218,9 @@ def net_test(net, epoch, log_file):
                        test_size, denominator)
         processed_events += dataset.batch_size
         if not use_time_ratio:
-            batch = dataset.get_batch_events(X), dataset.get_batch_matches(M)
+            batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M)
         else:
-            batch = dataset.get_batch_events(X), dataset.get_batch_matches(M), dataset.get_batch_events_as_events(E)
+            batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), dataset.get_batch_events_as_events(E)
 
     epoch_average_reward = epoch_average_reward / (constants['test_size'])
     test_rewards.append(epoch_average_reward)

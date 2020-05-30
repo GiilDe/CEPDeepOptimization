@@ -6,7 +6,7 @@ import typing
 import OpenCEP
 
 time_calc_types = ["steps_calculation", "time_measurement", "complexity_calculation", "event_num"]
-time_calc_index = 0
+time_calc_index = 3
 
 allow_gpu = True
 dev = "cuda" if allow_gpu and torch.cuda.is_available() else "cpu"
@@ -15,13 +15,13 @@ device = torch.device(dev)
 
 batch_size = 128
 
-UNFOUND_MATCHES_PENALTY = 3
+UNFOUND_MATCHES_PENALTY = 6
 REQUIRED_MATCHES_PORTION = 0.6
 
 FULL_WINDOW_COMPLEXITY = \
     2 ** (constants['pattern_window_size']) * (constants['window_size'] - constants['pattern_window_size'] + 1)
 
-convert_type = dict(zip(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], range(8)))
+convert_type = dict(zip(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], range(1, 9)))
 
 
 def get_batch_matches(M):
@@ -60,9 +60,9 @@ def get_batch_events(X):
 def get_batch_events_non_onehot(X):
     try:
         batch = next(X)
-        batch.iloc[:, 0] = batch.iloc[:, 0].apply(lambda type: convert_type[type])
+        batch.iloc[:, 0] = batch.iloc[:, 0].apply(lambda event_type: convert_type[event_type])
         batch = torch.tensor(batch.to_numpy(), dtype=torch.float64, requires_grad=True, device=device) \
-            .reshape((batch_size, constants['window_size'], 2))
+            .reshape((batch_size, constants['window_size'], constants['event_size']))
         return batch
     except (StopIteration, RuntimeError):
         return None
