@@ -4,7 +4,7 @@ import torch.nn as nn
 from constants import constants
 from itertools import product
 import numpy as np
-
+import time
 
 def get_fc_layer(in_dim, out_dim, use_dropout):
     fc = nn.Linear(in_dim, out_dim)
@@ -88,10 +88,12 @@ class ConvWindowToFilters(nn.Module):
 
     def forward(self, events):
         events = events.transpose(1, 2)
+        t1 = time.perf_counter_ns()
         features = self.conv(events)
         features = features.reshape((self.batch_size, 468)).double()
         probs = self.fc(features)
-        return sample_events(probs, self.batch_size)
+        t2 = time.perf_counter_ns()
+        return sample_events(probs, self.batch_size), t2 - t1
 
 
 class LinearWindowToFilters(nn.Module):

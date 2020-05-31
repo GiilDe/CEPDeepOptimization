@@ -18,7 +18,7 @@ steps = 1
 train_size = int(constants['train_size'] * steps / constants['window_size'])
 test_size = int(constants['test_size'] * steps / constants['window_size'])
 
-model_path = "training_data/reinforce"
+model_path = "training_data/net"
 batch_interval = 1000
 
 batch_interval = int(batch_interval / dataset.batch_size) * dataset.batch_size
@@ -99,7 +99,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             if steps != 1:
                 print("\n~new batch~\n")
             for _ in range(steps):
-                chosen_events, log_probs = net.forward(x)
+                chosen_events, log_probs, net_time = net.forward(x)
                 rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion, denominator = \
                     dataset.get_rewards(m, chosen_events, e if use_time_ratio else None)
                 chosen_events_num = np.mean(batches_chosen_events_num)
