@@ -65,12 +65,10 @@ class ConvWindowToFilters(nn.Module):
         self.conv = nn.Sequential(
             nn.Conv1d(constants['event_size'], 10, kernel_size=5),
             nn.ReLU(inplace=True),
-            # nn.MaxPool1d(kernel_size=3),
             nn.Conv1d(10, 5, kernel_size=5),
             nn.ReLU(inplace=True),
             nn.Conv1d(5, 2, kernel_size=5),
             nn.ReLU(inplace=True),
-            # nn.MaxPool1d(kernel_size=3),
         ).double()
         fc_mods = []
         fc_mods += get_fc_layer(36, 34, use_dropout)
@@ -90,7 +88,8 @@ class ConvWindowToFilters(nn.Module):
         features = features.reshape((self.batch_size, 36)).double()
         probs = self.fc(features)
         t2 = time.perf_counter()
-        return sample_events(probs, self.batch_size), t2 - t1
+        chosen_events, log_probs = sample_events(probs, self.batch_size)
+        return chosen_events, log_probs, t2 - t1
 
 
 class LinearWindowToFilters(nn.Module):

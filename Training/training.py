@@ -8,7 +8,7 @@ import numpy as np
 from neural_combinatorial_rl import NeuralCombOptNet, CriticNetwork
 from nets import *
 
-use_time_ratio = True
+use_time_ratio = True if dataset.time_calc_index in {0, 1} else False
 tanh_exploration = 10
 use_tanh = True
 hidden_dim = 64
@@ -141,7 +141,8 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             if not use_time_ratio:
                 batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M)
             else:
-                batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), dataset.get_batch_events_as_events(E)
+                batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(
+                    M), dataset.get_batch_events_as_events(E)
 
         epoch_average_reward = epoch_average_reward / (steps * constants['train_size'])
         epochs_rewards.append(epoch_average_reward)
@@ -160,7 +161,8 @@ def net_train(epochs, net, load_path=None, critic_net=None):
 
 
 def print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch, found_matches_portion,
-                   found_matches_portions, log_file, processed_events, rewards, size, denominator, is_validation=False):
+                   found_matches_portions, log_file, processed_events, rewards, size, denominator, is_validation=False,
+                   net_time=None, cep_whole_time=None, cep_filtered_time=None):
     if processed_events % batch_interval == 0:
         if not is_validation:
             print("Epoch " + str(epoch) + ": Processed " + str(processed_events) + " out of " +
@@ -182,7 +184,15 @@ def print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, 
         log_file.write("average reward: " + str(rewards.mean().item()) + "\n")
         log_file.write("matches portion to chosen events = " +
                        str(found_matches_portion / (chosen_events_num / constants['window_size'])))
-        log_file.write("-------------------\n")
+
+        if is_validation:
+            time_ = "actual time portion = " + str(cep_filtered_time / cep_whole_time)
+            print(time_)
+            log_file.write(time_)
+            net_time_ = "actual time portion with net = " + str((cep_filtered_time + net_time)/cep_whole_time)
+            print(net_time_)
+            log_file.write(net_time_)
+    log_file.write("-------------------\n")
 
 
 test_rewards = []
@@ -209,19 +219,20 @@ def net_test(net, epoch, log_file):
             x, m = batch
         else:
             x, m, e = batch
-        chosen_events, _ = net.forward(x)
-        rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion, denominator, time = \
-            dataset.get_rewards(m, chosen_events, e if use_time_ratio else None)
+        chosen_events, log_probs, net_time = net.forward(x)
+        rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion, denominator, whole_time, \
+        filtered_time = dataset.get_rewards(m, chosen_events, e if use_time_ratio else None, is_train=False)
         chosen_events_num = np.mean(batches_chosen_events_num)
         epoch_average_reward += rewards.mean().item()
-        print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch,
-                       found_matches_portion, found_matches_portions, log_file, processed_events, rewards,
-                       test_size, denominator)
+        print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch, found_matches_portion,
+                       found_matches_portions, log_file, processed_events, rewards, test_size, denominator,
+                       is_validation=True)
         processed_events += dataset.batch_size
         if not use_time_ratio:
             batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M)
         else:
-            batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), dataset.get_batch_events_as_events(E)
+            batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(
+                M), dataset.get_batch_events_as_events(E)
 
     epoch_average_reward = epoch_average_reward / (constants['test_size'])
     test_rewards.append(epoch_average_reward)
@@ -252,4 +263,4 @@ if __name__ == "__main__":
         n_process_block_iters=3
     )
     conv_model = ConvWindowToFilters(dataset.batch_size, False)
-    net_train(100, linear_model, critic_net=None)
+    net_train(100, conv_model, critic_net=None)

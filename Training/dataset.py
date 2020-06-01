@@ -194,15 +194,17 @@ def get_rewards(matches: typing.List, chosen_events: np.ndarray,
     matches_sum = 0
     found_matches_sum = 0
     denominator = 0
-    batches_whole_time = 0
-    batches_filtered_time = 0
+    if not is_train:
+        batches_whole_time = 0
+        batches_filtered_time = 0
     for i in range(batch_size):
         # window_complexity_ratio = max(get_window_complexity_ratio(i), 0.005)
         time_func = get_denominator_fun[time_calc_index]
         window_complexity_ratio = time_func(i)
         whole_time, filtered_time = get_time(i)
-        batches_whole_time += whole_time
-        batches_filtered_time += filtered_time
+        if not is_train:
+            batches_whole_time += whole_time
+            batches_filtered_time += filtered_time
         denominator += window_complexity_ratio
         matches_num, found_matches_num = get_window_matches(i)
         matches_sum += matches_num
@@ -220,6 +222,13 @@ def get_rewards(matches: typing.List, chosen_events: np.ndarray,
     chosen_events_num = np.sum(chosen_events, axis=1)
     actual_found_matches_portion = found_matches_sum / matches_sum
     denominator = denominator / batch_size
-    return rewards, chosen_events_num, found_matches_portions, actual_found_matches_portion, denominator
+        
+    if not is_train:
+        batches_whole_time = batches_whole_time / batch_size
+        batches_filtered_time = batches_filtered_time / batch_size
+        return rewards, chosen_events_num, found_matches_portions, actual_found_matches_portion, denominator\
+            , batches_whole_time, batches_filtered_time
+    else:
+        return rewards, chosen_events_num, found_matches_portions, actual_found_matches_portion, denominator
 
 
