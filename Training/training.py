@@ -86,16 +86,10 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             E = dataset.initialize_data_x(True)
         net.train()
         processed_events = 0
-        if not use_time_ratio:
-            batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M)
-        else:
-            batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), \
-                    dataset.get_batch_events_as_events(E)
-        while batch[0] is not None and batch[1] is not None:
-            if not use_time_ratio:
-                x, m = batch
-            else:
-                x, m, e = batch
+        x, m, e = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), None
+        if use_time_ratio:
+            e = dataset.get_batch_events_as_events(E)
+        while x is not None and m is not None:
             if steps != 1:
                 print("\n~new batch~\n")
             for _ in range(steps):
@@ -138,11 +132,9 @@ def net_train(epochs, net, load_path=None, critic_net=None):
                                train_size, denominator)
 
                 processed_events += dataset.batch_size
-            if not use_time_ratio:
-                batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M)
-            else:
-                batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(
-                    M), dataset.get_batch_events_as_events(E)
+            x, m, e = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), None
+            if use_time_ratio:
+                e = dataset.get_batch_events_as_events(E)
 
         epoch_average_reward = epoch_average_reward / (steps * constants['train_size'])
         epochs_rewards.append(epoch_average_reward)
@@ -189,7 +181,7 @@ def print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, 
             time_ = "actual time portion = " + str(cep_filtered_time / cep_whole_time)
             print(time_)
             log_file.write(time_)
-            net_time_ = "actual time portion with net = " + str((cep_filtered_time + net_time)/cep_whole_time)
+            net_time_ = "actual time portion with net = " + str((cep_filtered_time + net_time) / cep_whole_time)
             print(net_time_)
             log_file.write(net_time_)
     log_file.write("-------------------\n")
@@ -207,12 +199,12 @@ def net_test(net, epoch, log_file):
     processed_events = 0
     log_file.write("\n~validation~\n")
     print("\n~validation~\n")
-    batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), dataset.get_batch_events_as_events(E)
-    while batch[0] is not None and batch[1] is not None:
-        x, m, e = batch
+    x, m, e = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), \
+              dataset.get_batch_events_as_events(E)
+    while x is not None and m is not None:
         chosen_events, log_probs, net_time = net.forward(x)
         rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion, denominator, whole_time, \
-            filtered_time = dataset.get_rewards(m, chosen_events, e, is_train=False)
+        filtered_time = dataset.get_rewards(m, chosen_events, e, is_train=False)
         chosen_events_num = np.mean(batches_chosen_events_num)
         epoch_average_reward += rewards.mean().item()
         print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch, found_matches_portion,
@@ -220,7 +212,8 @@ def net_test(net, epoch, log_file):
                        is_validation=True, net_time=net_time, cep_whole_time=whole_time,
                        cep_filtered_time=filtered_time)
         processed_events += dataset.batch_size
-        batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), dataset.get_batch_events_as_events(E)
+        x, m, e = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), \
+                  dataset.get_batch_events_as_events(E)
 
     epoch_average_reward = epoch_average_reward / (constants['test_size'])
     test_rewards.append(epoch_average_reward)
