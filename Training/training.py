@@ -8,7 +8,7 @@ import numpy as np
 from neural_combinatorial_rl import NeuralCombOptNet, CriticNetwork
 from nets import *
 
-use_time_ratio = False
+use_time_ratio = True
 tanh_exploration = 10
 use_tanh = True
 hidden_dim = 64
@@ -202,7 +202,8 @@ def net_test(net, epoch, log_file):
     if not use_time_ratio:
         batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M)
     else:
-        batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), dataset.get_batch_events_as_events(E)
+        batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), \
+                dataset.get_batch_events_as_events(E)
     while batch[0] is not None and batch[1] is not None:
         if not use_time_ratio:
             x, m = batch
@@ -251,4 +252,4 @@ if __name__ == "__main__":
         n_process_block_iters=3
     )
     conv_model = ConvWindowToFilters(dataset.batch_size, False)
-    net_train(100, conv_model, critic_net=None)
+    net_train(100, linear_model, critic_net=None)

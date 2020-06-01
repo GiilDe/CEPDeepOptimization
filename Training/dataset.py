@@ -5,8 +5,9 @@ import numpy as np
 import typing
 import OpenCEP
 
+
 time_calc_types = ["steps_calculation", "time_measurement", "complexity_calculation", "event_num"]
-time_calc_index = 3
+time_calc_index = 0
 
 allow_gpu = True
 dev = "cuda" if allow_gpu and torch.cuda.is_available() else "cpu"
