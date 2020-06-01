@@ -226,7 +226,8 @@ def net_test(net, epoch, log_file):
         epoch_average_reward += rewards.mean().item()
         print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch, found_matches_portion,
                        found_matches_portions, log_file, processed_events, rewards, test_size, denominator,
-                       is_validation=True)
+                       is_validation=True, net_time=net_time, cep_whole_time=whole_time,
+                       cep_filtered_time=filtered_time)
         processed_events += dataset.batch_size
         if not use_time_ratio:
             batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M)

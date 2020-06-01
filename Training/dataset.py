@@ -7,7 +7,7 @@ import OpenCEP
 
 
 time_calc_types = ["steps_calculation", "time_measurement", "complexity_calculation", "event_num"]
-time_calc_index = 0
+time_calc_index = 3
 
 allow_gpu = True
 dev = "cuda" if allow_gpu and torch.cuda.is_available() else "cpu"
@@ -106,7 +106,8 @@ cep_processor = OpenCEP.processor.TimeCalcProcessor(['count', 'type', 'value'], 
 
 
 def get_rewards(matches: typing.List, chosen_events: np.ndarray,
-                window_events: typing.Union[None, pd.DataFrame] = None):
+                window_events: typing.Union[None, pd.DataFrame] = None,
+                is_train=True):
     def get_window_complexity_ratio(i):
         batch_chosen_events = chosen_events[i]
         pattern_window_size = constants['pattern_window_size']
