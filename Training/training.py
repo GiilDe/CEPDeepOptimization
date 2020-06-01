@@ -209,7 +209,7 @@ def net_test(net, epoch, log_file):
         else:
             x, m, e = batch
         chosen_events, _ = net.forward(x)
-        rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion, denominator = \
+        rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion, denominator, time = \
             dataset.get_rewards(m, chosen_events, e if use_time_ratio else None)
         chosen_events_num = np.mean(batches_chosen_events_num)
         epoch_average_reward += rewards.mean().item()

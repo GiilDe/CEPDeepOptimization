@@ -141,6 +141,14 @@ def get_rewards(matches: typing.List, chosen_events: np.ndarray,
 
         return filtered_steps / whole_steps
 
+    def get_time(i):
+        filtered_window, window = get_window(i)
+
+        whole_time, _ = cep_processor.query(window)
+        filtered_time, _ = cep_processor.query(filtered_window)
+
+        return whole_time, filtered_time
+
     def get_window(i):
         batch_chosen_events = chosen_events[i].astype(bool)
         batch_events = window_events.iloc[i * constants['window_size']:(i + 1) * constants['window_size']]
@@ -185,10 +193,15 @@ def get_rewards(matches: typing.List, chosen_events: np.ndarray,
     matches_sum = 0
     found_matches_sum = 0
     denominator = 0
+    batches_whole_time = 0
+    batches_filtered_time = 0
     for i in range(batch_size):
         # window_complexity_ratio = max(get_window_complexity_ratio(i), 0.005)
         time_func = get_denominator_fun[time_calc_index]
         window_complexity_ratio = time_func(i)
+        whole_time, filtered_time = get_time(i)
+        batches_whole_time += whole_time
+        batches_filtered_time += filtered_time
         denominator += window_complexity_ratio
         matches_num, found_matches_num = get_window_matches(i)
         matches_sum += matches_num

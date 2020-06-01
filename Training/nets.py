@@ -88,11 +88,11 @@ class ConvWindowToFilters(nn.Module):
 
     def forward(self, events):
         events = events.transpose(1, 2)
-        t1 = time.perf_counter_ns()
+        t1 = time.perf_counter()
         features = self.conv(events)
         features = features.reshape((self.batch_size, 468)).double()
         probs = self.fc(features)
-        t2 = time.perf_counter_ns()
+        t2 = time.perf_counter()
         return sample_events(probs, self.batch_size), t2 - t1
 
 
