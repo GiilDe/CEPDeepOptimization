@@ -202,26 +202,17 @@ def net_test(net, epoch, log_file):
     global test_rewards
     net.to(device=dataset.device)
     epoch_average_reward = 0
-    X, M = dataset.initialize_data_x(False), dataset.initialize_data_matches(False)
-    if use_time_ratio:
-        E = dataset.initialize_data_x(False)
+    X, M, E = dataset.initialize_data_x(False), dataset.initialize_data_matches(False), dataset.initialize_data_x(False)
     net.eval()
     processed_events = 0
     log_file.write("\n~validation~\n")
     print("\n~validation~\n")
-    if not use_time_ratio:
-        batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M)
-    else:
-        batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), \
-                dataset.get_batch_events_as_events(E)
+    batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), dataset.get_batch_events_as_events(E)
     while batch[0] is not None and batch[1] is not None:
-        if not use_time_ratio:
-            x, m = batch
-        else:
-            x, m, e = batch
+        x, m, e = batch
         chosen_events, log_probs, net_time = net.forward(x)
         rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion, denominator, whole_time, \
-        filtered_time = dataset.get_rewards(m, chosen_events, e if use_time_ratio else None, is_train=False)
+            filtered_time = dataset.get_rewards(m, chosen_events, e, is_train=False)
         chosen_events_num = np.mean(batches_chosen_events_num)
         epoch_average_reward += rewards.mean().item()
         print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch, found_matches_portion,
@@ -229,11 +220,7 @@ def net_test(net, epoch, log_file):
                        is_validation=True, net_time=net_time, cep_whole_time=whole_time,
                        cep_filtered_time=filtered_time)
         processed_events += dataset.batch_size
-        if not use_time_ratio:
-            batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M)
-        else:
-            batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(
-                M), dataset.get_batch_events_as_events(E)
+        batch = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), dataset.get_batch_events_as_events(E)
 
     epoch_average_reward = epoch_average_reward / (constants['test_size'])
     test_rewards.append(epoch_average_reward)

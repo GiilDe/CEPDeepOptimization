@@ -5,7 +5,6 @@ import numpy as np
 import typing
 import OpenCEP
 
-
 time_calc_types = ["steps_calculation", "time_measurement", "complexity_calculation", "event_num"]
 time_calc_index = 3
 
@@ -48,6 +47,7 @@ def get_batch_events(X):
         x = pd.get_dummies(x)
         x = x.drop(axis=0, labels=[0, 1, 2, 3, 4, 5, 6, 7])
         return x
+
     try:
         batch = next(X)
         batch = get_dummies(batch)
@@ -202,8 +202,8 @@ def get_rewards(matches: typing.List, chosen_events: np.ndarray,
         # window_complexity_ratio = max(get_window_complexity_ratio(i), 0.005)
         time_func = get_denominator_fun[time_calc_index]
         window_complexity_ratio = time_func(i)
-        whole_time, filtered_time = get_time(i)
         if not is_train:
+            whole_time, filtered_time = get_time(i)
             batches_whole_time += whole_time
             batches_filtered_time += filtered_time
         denominator += window_complexity_ratio
@@ -223,13 +223,11 @@ def get_rewards(matches: typing.List, chosen_events: np.ndarray,
     chosen_events_num = np.sum(chosen_events, axis=1)
     actual_found_matches_portion = found_matches_sum / matches_sum
     denominator = denominator / batch_size
-        
+
     if not is_train:
         batches_whole_time = batches_whole_time / batch_size
         batches_filtered_time = batches_filtered_time / batch_size
-        return rewards, chosen_events_num, found_matches_portions, actual_found_matches_portion, denominator\
-            , batches_whole_time, batches_filtered_time
+        return rewards, chosen_events_num, found_matches_portions, actual_found_matches_portion, denominator, \
+            batches_whole_time, batches_filtered_time
     else:
         return rewards, chosen_events_num, found_matches_portions, actual_found_matches_portion, denominator
-
-
