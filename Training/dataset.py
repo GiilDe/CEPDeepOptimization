@@ -15,7 +15,7 @@ device = torch.device(dev)
 
 batch_size = 128
 
-UNFOUND_MATCHES_PENALTY = 15
+UNFOUND_MATCHES_PENALTY = 3
 REQUIRED_MATCHES_PORTION = 0.6
 
 FULL_WINDOW_COMPLEXITY = \
@@ -42,12 +42,11 @@ def get_batch_matches(M):
 
 def get_batch_events(X):
     def get_dummies(x):
-        padding = pd.DataFrame([['A', -1], ['B', -1], ['C', -1], ['D', -1], ['E', -1], ['F', -1], ['G', -1], ['H', -1]])
+        padding = pd.DataFrame([['A', -1], ['B', -1], ['C', -1], ['D', -1]])
         x = padding.append(x, ignore_index=True)
         x = pd.get_dummies(x)
-        x = x.drop(axis=0, labels=[0, 1, 2, 3, 4, 5, 6, 7])
+        x = x.drop(axis=0, labels=[0, 1, 2, 3])
         return x
-
     try:
         batch = next(X)
         batch = get_dummies(batch)

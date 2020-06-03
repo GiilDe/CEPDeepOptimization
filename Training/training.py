@@ -88,7 +88,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             E = dataset.initialize_data_x(True)
         net.train()
         processed_events = 0
-        x, m, e = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), None
+        x, m, e = dataset.get_batch_events(X), dataset.get_batch_matches(M), None
         if use_time_ratio:
             e = dataset.get_batch_events_as_events(E)
         while x is not None and m is not None:
@@ -135,7 +135,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
                                train_size, denominator)
 
                 processed_events += dataset.batch_size
-            x, m, e = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), None
+            x, m, e = dataset.get_batch_events(X), dataset.get_batch_matches(M), None
             if use_time_ratio:
                 e = dataset.get_batch_events_as_events(E)
 
@@ -204,12 +204,12 @@ def net_test(net, epoch, log_file):
     processed_events = 0
     log_file.write("\n~validation~\n")
     print("\n~validation~\n")
-    x, m, e = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), \
+    x, m, e = dataset.get_batch_events(X), dataset.get_batch_matches(M), \
         dataset.get_batch_events_as_events(E)
     while x is not None and m is not None:
         chosen_events, log_probs, net_time = net.forward(x)
         rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion, denominator, whole_time, \
-        filtered_time = dataset.get_rewards(m, chosen_events, e, is_train=False)
+            filtered_time = dataset.get_rewards(m, chosen_events, e, is_train=False)
         chosen_events_num = np.mean(batches_chosen_events_num)
         epoch_average_reward += rewards.mean().item()
         print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch, found_matches_portion,
@@ -217,7 +217,7 @@ def net_test(net, epoch, log_file):
                        is_validation=True, net_time=net_time, cep_whole_time=whole_time,
                        cep_filtered_time=filtered_time)
         processed_events += dataset.batch_size
-        x, m, e = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), \
+        x, m, e = dataset.get_batch_events(X), dataset.get_batch_matches(M), \
             dataset.get_batch_events_as_events(E)
 
     epoch_average_reward = epoch_average_reward / (constants['test_size'])

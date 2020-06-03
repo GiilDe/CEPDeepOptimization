@@ -5,10 +5,12 @@ from constants import constants
 from itertools import product
 import numpy as np
 import time
+import math
 
 
 def get_fc_layer(in_dim, out_dim, use_dropout):
     fc = nn.Linear(in_dim, out_dim)
+    # fc.weight.data.uniform_(50000, 50000)
     b_norm = nn.BatchNorm1d(out_dim)
     relu = nn.ReLU()
     modules = [fc, b_norm, relu]
@@ -64,20 +66,21 @@ class ConvWindowToFilters(nn.Module):
     def __init__(self, batch_size, use_dropout):
         super(ConvWindowToFilters, self).__init__()
         self.conv = nn.Sequential(
-            nn.Conv1d(constants['event_size'], 6, kernel_size=5),
+            nn.Conv1d(constants['event_size'], 10, kernel_size=3),
             nn.ReLU(inplace=True),
-            nn.Conv1d(6, 5, kernel_size=5),
+            nn.Conv1d(10, 5, kernel_size=3),
             nn.ReLU(inplace=True),
-            nn.Conv1d(5, 4, kernel_size=5),
-            nn.ReLU(inplace=True),
-            nn.Conv1d(4, 2, kernel_size=5),
+            nn.Conv1d(5, 2, kernel_size=3),
             nn.ReLU(inplace=True),
         ).double()
+        # for p in self.conv:
+        #     if type(p) == nn.Conv1d:
+        #         p.weight.data.uniform_(500, 500)
         fc_mods = []
-        fc_mods += get_fc_layer(468, 400, use_dropout)
-        fc_mods += get_fc_layer(400, 350, use_dropout)
-        fc_mods += get_fc_layer(350, 300, use_dropout)
-        fc = nn.Linear(300, constants['window_size'])
+        fc_mods += get_fc_layer(48, 43, use_dropout)
+        fc_mods += get_fc_layer(43, 38, use_dropout)
+        fc_mods += get_fc_layer(38, 35, use_dropout)
+        fc = nn.Linear(35, constants['window_size'])
         fc_mods.append(fc)
         sigmoid = nn.Sigmoid()
         fc_mods.append(sigmoid)
@@ -88,7 +91,7 @@ class ConvWindowToFilters(nn.Module):
         events = events.transpose(1, 2)
         t1 = time.perf_counter()
         features = self.conv(events)
-        features = features.reshape((self.batch_size, 468)).double()
+        features = features.reshape((self.batch_size, 48)).double()
         probs = self.fc(features)
         t2 = time.perf_counter()
         chosen_events, log_probs = sample_events(probs, self.batch_size)
@@ -96,20 +99,8 @@ class ConvWindowToFilters(nn.Module):
 
 
 class LinearWindowToFilters(nn.Module):
-    def __init__(self, batch_size):
+    def __init__(self, batch_size, use_dropout=False):
         super(LinearWindowToFilters, self).__init__()
-        self.probs_net = WindowToFiltersFC(batch_size)
-        self.batch_size = batch_size
-
-    def forward(self, events):
-        # events/events_probs dims: (batch_size, window_size)
-        events_probs = self.probs_net(events)
-        return sample_events(events_probs, self.batch_size)
-
-
-class WindowToFiltersFC(nn.Module):
-    def __init__(self, batch_size, use_dropout=True):
-        super(WindowToFiltersFC, self).__init__()
         modules = []
         # constants['event_size'] * constants['window_size'] = 150
         modules += get_fc_layer(constants['event_size'] * constants['window_size'], 130, use_dropout)
@@ -117,16 +108,14 @@ class WindowToFiltersFC(nn.Module):
         modules += get_fc_layer(110, 90, use_dropout)
         modules += get_fc_layer(90, 70, use_dropout)
         modules += get_fc_layer(70, 50, use_dropout)
-        fc = nn.Linear(50, constants['window_size'])
-        modules.append(fc)
-        sigmoid = nn.Sigmoid()
-        modules.append(sigmoid)
-        self.network = nn.Sequential(*modules)
-        self.network.double()
+        modules += [nn.Linear(50, constants['window_size'])]
+        modules += [nn.Sigmoid()]
+        self.probs_net = nn.Sequential(*modules)
+        self.probs_net.double()
         self.batch_size = batch_size
 
     def forward(self, events):
-        # events dimensions: (batch_size, window_size, event_size)
-        # output dimensions: (batch_size, window_size)
-        x = events.reshape((self.batch_size, constants['window_size'] * constants['event_size']))
-        return self.network(x)
+        # events/events_probs dims: (batch_size, window_size)
+        events = events.reshape((self.batch_size, constants['window_size'] * constants['event_size']))
+        events_probs = self.probs_net(events)
+        return sample_events(events_probs, self.batch_size)
