@@ -6,6 +6,7 @@ from itertools import product
 import numpy as np
 import time
 
+
 def get_fc_layer(in_dim, out_dim, use_dropout):
     fc = nn.Linear(in_dim, out_dim)
     b_norm = nn.BatchNorm1d(out_dim)

@@ -45,7 +45,9 @@ def net_train(epochs, net, load_path=None, critic_net=None):
     global test_rewards
     optimizer, learning_rate = get_pointer_net_optimizer(net) if type(net) == NeuralCombOptNet else \
         get_linear_net_optimizer(net)
-    # scheduler = lr_scheduler.MultiStepLR(optimizer, range(decay_step, decay_step * 1000, decay_step), gamma=decay_rate)
+
+    # scheduler = lr_scheduler.MultiStepLR(optimizer, range(decay_step, decay_step * 1000, decay_step),
+    #                                      gamma=decay_rate)
 
     if critic_net is not None:
         critic_optim = optim.Adam(critic_net.parameters(), lr=learning_rate)
@@ -96,6 +98,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
                 chosen_events, log_probs, net_time = net.forward(x)
                 rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion, denominator = \
                     dataset.get_rewards(m, chosen_events, e if use_time_ratio else None)
+                epoch_average_reward += rewards.mean().item()
                 chosen_events_num = np.mean(batches_chosen_events_num)
                 if critic_net is not None:
                     critic_out = critic_net(x.detach())
@@ -151,6 +154,8 @@ def net_train(epochs, net, load_path=None, critic_net=None):
 
         epoch += 1
 
+    log_file.close()
+
 
 def print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch, found_matches_portion,
                    found_matches_portions, log_file, processed_events, rewards, size, denominator, is_validation=False,
@@ -200,7 +205,7 @@ def net_test(net, epoch, log_file):
     log_file.write("\n~validation~\n")
     print("\n~validation~\n")
     x, m, e = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), \
-              dataset.get_batch_events_as_events(E)
+        dataset.get_batch_events_as_events(E)
     while x is not None and m is not None:
         chosen_events, log_probs, net_time = net.forward(x)
         rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion, denominator, whole_time, \
@@ -213,7 +218,7 @@ def net_test(net, epoch, log_file):
                        cep_filtered_time=filtered_time)
         processed_events += dataset.batch_size
         x, m, e = dataset.get_batch_events_non_onehot(X), dataset.get_batch_matches(M), \
-                  dataset.get_batch_events_as_events(E)
+            dataset.get_batch_events_as_events(E)
 
     epoch_average_reward = epoch_average_reward / (constants['test_size'])
     test_rewards.append(epoch_average_reward)
