@@ -21,19 +21,15 @@ def get_fc_layer(in_dim, out_dim, use_dropout):
 
 
 def sample_events(events_probs, batch_size, use_unchosen_probs=True):
-    chosen_events = torch.zeros_like(events_probs)
-    chosen_events_np_ = np.zeros((batch_size, constants['window_size']))
+    chosen_events = torch.empty_like(events_probs)
 
     for batch_i, event_i in product(range(batch_size), range(constants['window_size'])):
         choice = np.random.choice([0, 1], size=None, p=[events_probs[batch_i, event_i].item(),
                                                         1 - events_probs[batch_i, event_i].item()])
         # choice = 0 event is chosen, choice = 1 event is not chosen
         chosen_events[batch_i, event_i] = torch.tensor(choice).item()
-        chosen_events_np_[batch_i, event_i] = 1 - choice  # for output reasons: flip choice
 
-    chosen_events_np = (1 - chosen_events).numpy()
-
-    assert np.array_equal(chosen_events_np, chosen_events_np_)
+    chosen_events_np = (1 - chosen_events).numpy()  # for output reasons: flip choice
 
     if use_unchosen_probs:
         flipped_probs = torch.abs(chosen_events - events_probs)  # flip unchosen probabilities
@@ -45,25 +41,6 @@ def sample_events(events_probs, batch_size, use_unchosen_probs=True):
         log_probs = torch.sum(masked_log_probs, dim=1)
 
     return chosen_events_np, log_probs
-
-
-class DummyModel(nn.Module):
-    def __init__(self, batch_size):
-        super(DummyModel, self).__init__()
-        self.batch_size = batch_size
-
-    def forward(self, events):
-        # chosen_events = np.ones((self.batch_size, constants['window_size']))
-        # for i in range(self.batch_size):
-        #     chosen_events[i, :4] = 0
-        #     chosen_events[i, -4:] = 0
-
-        chosen_events = np.zeros((self.batch_size, constants['window_size']))
-        for i in range(self.batch_size):
-            batch_chosen_events = np.random.choice(a=range(constants['window_size']), size=20, replace=False)
-            chosen_events[i, batch_chosen_events] = 1
-
-        return chosen_events, torch.full(size=(self.batch_size,), fill_value=-2)
 
 
 class ConvWindowToFilters(nn.Module):
