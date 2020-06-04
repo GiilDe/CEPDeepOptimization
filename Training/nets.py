@@ -29,7 +29,7 @@ def sample_events(events_probs, batch_size, use_unchosen_probs=True):
         # choice = 0 event is chosen, choice = 1 event is not chosen
         chosen_events[batch_i, event_i] = torch.tensor(choice).item()
 
-    chosen_events_np = (1 - chosen_events).numpy()  # for output reasons: flip choice
+    chosen_events_np = (1 - chosen_events).cpu().numpy()  # for output reasons: flip choice
 
     if use_unchosen_probs:
         flipped_probs = torch.abs(chosen_events - events_probs)  # flip unchosen probabilities
