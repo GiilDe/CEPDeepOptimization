@@ -91,6 +91,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
         x, m, e = dataset.get_batch_events(X), dataset.get_batch_matches(M), None
         if use_time_ratio:
             e = dataset.get_batch_events_as_events(E)
+        i = -1
         while x is not None and m is not None:
             if steps != 1:
                 print("\n~new batch~\n")
@@ -139,7 +140,9 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             if use_time_ratio:
                 e = dataset.get_batch_events_as_events(E)
 
-        epoch_average_reward = epoch_average_reward / (steps * constants['train_size'])
+            i += 1
+
+        epoch_average_reward = epoch_average_reward / i
         epochs_rewards.append(epoch_average_reward)
         torch.save({
             'epoch': epoch,
@@ -148,9 +151,9 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             'rewards': epochs_rewards,
         }, model_path + "_" + str(epoch))
 
-        print("train losses: " + str(epochs_rewards))
+        print("train rewards: " + str(epochs_rewards))
         net_test(net, epoch, log_file)
-        print("test losses: " + str(test_rewards))
+        print("test rewards: " + str(test_rewards))
 
         epoch += 1
 
@@ -206,6 +209,7 @@ def net_test(net, epoch, log_file):
     print("\n~validation~\n")
     x, m, e = dataset.get_batch_events(X), dataset.get_batch_matches(M), \
         dataset.get_batch_events_as_events(E)
+    i = -1
     while x is not None and m is not None:
         chosen_events, log_probs, net_time = net.forward(x)
         rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion, denominator, whole_time, \
@@ -219,8 +223,9 @@ def net_test(net, epoch, log_file):
         processed_events += dataset.batch_size
         x, m, e = dataset.get_batch_events(X), dataset.get_batch_matches(M), \
             dataset.get_batch_events_as_events(E)
+        i += 1
 
-    epoch_average_reward = epoch_average_reward / (constants['test_size'])
+    epoch_average_reward = epoch_average_reward / i
     test_rewards.append(epoch_average_reward)
 
 

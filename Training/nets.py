@@ -22,14 +22,18 @@ def get_fc_layer(in_dim, out_dim, use_dropout):
 
 def sample_events(events_probs, batch_size, use_unchosen_probs=True):
     chosen_events = torch.zeros_like(events_probs)
-    chosen_events_np = np.zeros((batch_size, constants['window_size']))
+    chosen_events_np_ = np.zeros((batch_size, constants['window_size']))
 
     for batch_i, event_i in product(range(batch_size), range(constants['window_size'])):
         choice = np.random.choice([0, 1], size=None, p=[events_probs[batch_i, event_i].item(),
                                                         1 - events_probs[batch_i, event_i].item()])
         # choice = 0 event is chosen, choice = 1 event is not chosen
         chosen_events[batch_i, event_i] = torch.tensor(choice).item()
-        chosen_events_np[batch_i, event_i] = 1 - choice  # for output reasons: flip choice
+        chosen_events_np_[batch_i, event_i] = 1 - choice  # for output reasons: flip choice
+
+    chosen_events_np = (1 - chosen_events).numpy()
+
+    assert np.array_equal(chosen_events_np, chosen_events_np_)
 
     if use_unchosen_probs:
         flipped_probs = torch.abs(chosen_events - events_probs)  # flip unchosen probabilities
