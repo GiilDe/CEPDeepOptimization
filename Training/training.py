@@ -189,9 +189,13 @@ def print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, 
             time_ = "actual time portion = " + str(cep_filtered_time / cep_whole_time)
             print(time_)
             log_file.write(time_)
-            net_time_ = "actual time portion with net = " + str((cep_filtered_time + net_time) / cep_whole_time)
+            time_ratio = str((cep_filtered_time + net_time) / cep_whole_time)
+            net_time_ = "actual time portion with net = " + time_ratio
             print(net_time_)
             log_file.write(net_time_)
+            actual_portion = "actual time with net to found matches portion = " + str(found_matches_portion/time_ratio)
+            print(actual_portion)
+            log_file.write(actual_portion)
     log_file.write("-------------------\n")
 
 
