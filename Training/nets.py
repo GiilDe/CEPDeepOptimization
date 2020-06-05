@@ -52,14 +52,15 @@ class ConvWindowToFilters(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv1d(5, 4, kernel_size=5),
             nn.ReLU(inplace=True),
-            nn.Conv1d(4, 2, kernel_size=5),
+            nn.Conv1d(4, 3, kernel_size=5),
             nn.ReLU(inplace=True),
         ).double()
         fc_mods = []
-        fc_mods += get_fc_layer(468, 400, use_dropout)
-        fc_mods += get_fc_layer(400, 350, use_dropout)
-        fc_mods += get_fc_layer(350, 300, use_dropout)
-        fc = nn.Linear(300, constants['window_size'])
+        fc_mods += get_fc_layer(702, 620, use_dropout)
+        fc_mods += get_fc_layer(620, 540, use_dropout)
+        fc_mods += get_fc_layer(540, 460, use_dropout)
+        fc_mods += get_fc_layer(460, 400, use_dropout)
+        fc = nn.Linear(400, constants['window_size'])
         fc_mods.append(fc)
         sigmoid = nn.Sigmoid()
         fc_mods.append(sigmoid)
@@ -70,7 +71,7 @@ class ConvWindowToFilters(nn.Module):
         events = events.transpose(1, 2)
         t1 = time.perf_counter()
         features = self.conv(events)
-        features = features.reshape((self.batch_size, 468)).double()
+        features = features.reshape((self.batch_size, 702)).double()
         probs = self.fc(features)
         t2 = time.perf_counter()
         chosen_events, log_probs = sample_events(probs, self.batch_size)
