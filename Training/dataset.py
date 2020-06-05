@@ -42,10 +42,10 @@ def get_batch_matches(M):
 
 def get_batch_events(X):
     def get_dummies(x):
-        padding = pd.DataFrame([['A', -1], ['B', -1], ['C', -1], ['D', -1]])
+        padding = pd.DataFrame([['A', -1], ['B', -1], ['C', -1], ['D', -1], ['E', -1], ['F', -1], ['G', -1], ['H', -1]])
         x = padding.append(x, ignore_index=True)
         x = pd.get_dummies(x)
-        x = x.drop(axis=0, labels=[0, 1, 2, 3])
+        x = x.drop(axis=0, labels=[0, 1, 2, 3, 4, 5, 6, 7])
         return x
     try:
         batch = next(X)
@@ -87,19 +87,31 @@ def initialize_data_matches(is_train):
     return M
 
 
-def condition1(A: OpenCEP.processing_utilities.Event, B: OpenCEP.processing_utilities.Event) -> bool:
+def val_smaller(A: OpenCEP.processing_utilities.Event, B: OpenCEP.processing_utilities.Event) -> bool:
     return A.value < B.value
 
 
-condition = OpenCEP.processing_utilities.Condition(condition1, [0, 1])
+def mult_val_smaller(a1: OpenCEP.processing_utilities.Event,
+                     a2: OpenCEP.processing_utilities.Event,
+                     a4: OpenCEP.processing_utilities.Event,
+                     a5: OpenCEP.processing_utilities.Event)\
+        -> bool:
+    return (2 * (a4.value + a2.value + a1.value)) < a5.value
 
-event_types = ['A', 'B']
+
+cond1 = OpenCEP.processing_utilities.Condition(val_smaller, [0, 1])
+cond2 = OpenCEP.processing_utilities.Condition(val_smaller, [1, 2])
+cond3 = OpenCEP.processing_utilities.Condition(val_smaller, [3, 0])
+cond4 = OpenCEP.processing_utilities.Condition(mult_val_smaller, [0, 1, 3, 4])
+
+
+event_types = ['A', 'B', 'C', 'D', 'E']
 event_types_with_identifiers = \
     [OpenCEP.processing_utilities.EventTypeOrPatternAndIdentifier(type, i) for i, type in enumerate(event_types)]
 seq_event_pattern = OpenCEP.processing_utilities. \
     EventPattern(event_types_with_identifiers, OpenCEP.processing_utilities.Seq(range(len(event_types))))
 seq_pattern_query = OpenCEP.processing_utilities. \
-    CleanPatternQuery(seq_event_pattern, [condition], time_limit=constants['pattern_window_size'])
+    CleanPatternQuery(seq_event_pattern, [cond1, cond2, cond3, cond4], time_limit=constants['pattern_window_size'])
 
 cep_processor = OpenCEP.processor.TimeCalcProcessor(['count', 'type', 'value'], 0, 1, [seq_pattern_query])
 
@@ -119,12 +131,12 @@ def get_rewards(matches: typing.List, chosen_events: np.ndarray,
             pattern_window_selected += batch_chosen_events[i]
             window_complexity += 2 ** pattern_window_selected
 
-        return window_complexity / FULL_WINDOW_COMPLEXITY
+        return max(window_complexity, 1) / FULL_WINDOW_COMPLEXITY
 
     def get_window_event_num_ratio(i):
         batch_chosen_events = chosen_events[i]
         batch_chosen_events_num = np.sum(batch_chosen_events)
-        return max(batch_chosen_events_num, 1) / constants['window_size']
+        return max(batch_chosen_events_num, 0.5) / constants['window_size']
 
     def get_window_time_ratio(i):
         filtered_window, window = get_window(i)
@@ -198,7 +210,6 @@ def get_rewards(matches: typing.List, chosen_events: np.ndarray,
         batches_whole_time = 0
         batches_filtered_time = 0
     for i in range(batch_size):
-        # window_complexity_ratio = max(get_window_complexity_ratio(i), 0.005)
         time_func = get_denominator_fun[time_calc_index]
         window_complexity_ratio = time_func(i)
         if not is_train:

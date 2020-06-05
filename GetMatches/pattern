@@ -1,14 +1,4 @@
 select *
-from Event#length(5) as a, Event#length(5) as b
-where
-a.count < b.count and
-a.type = 'A' and
-b.type = 'B' and
-a.value < b.value
-done
-
-
-select *
 from Event#length(100) as a1,
 Event#length(100) as a2,
 Event#length(100) as a3,
@@ -29,6 +19,19 @@ a2.value < a3.value and
 a1.value < a2.value and
 a4.value < a1.value
 done
+
+
+select *
+from Event#length(5) as a, Event#length(5) as b
+where
+a.count < b.count and
+a.type = 'A' and
+b.type = 'B' and
+a.value < b.value
+done
+
+
+
 
 
 penalty = 3
