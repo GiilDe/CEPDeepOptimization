@@ -5,7 +5,6 @@ from constants import constants
 from itertools import product
 import numpy as np
 import time
-import math
 
 
 def get_fc_layer(in_dim, out_dim, use_dropout):
