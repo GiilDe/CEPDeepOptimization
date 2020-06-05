@@ -67,14 +67,16 @@ class ConvWindowToFilters(nn.Module):
         self.fc = nn.Sequential(*fc_mods).double()
         self.batch_size = batch_size
 
-    def forward(self, events):
+    def forward(self, events, batch_size=None):
+        if batch_size is None:
+            batch_size = self.batch_size
         events = events.transpose(1, 2)
         t1 = time.perf_counter()
         features = self.conv(events)
-        features = features.reshape((self.batch_size, 702)).double()
+        features = features.reshape((batch_size, 702)).double()
         probs = self.fc(features)
         t2 = time.perf_counter()
-        chosen_events, log_probs = sample_events(probs, self.batch_size)
+        chosen_events, log_probs = sample_events(probs, batch_size)
         return chosen_events, log_probs, t2 - t1
 
 

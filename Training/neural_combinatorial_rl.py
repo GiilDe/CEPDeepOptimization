@@ -4,7 +4,7 @@ import math
 import numpy as np
 import dataset
 from constants import constants
-
+import time
 
 class Encoder(nn.Module):
     """Maps a graph represented as an input sequence
@@ -422,7 +422,9 @@ class NeuralCombOptNet(nn.Module):
             embedded_inputs = inputs.transpose(0, 2).transpose(1, 2)
             embedded_inputs.to(dtype=torch.double)
 
+        t1 = time.perf_counter()
         probs_, actions_idxs = self.actor_net(embedded_inputs)
+        t2 = time.perf_counter()
 
         if self.is_train:
             # probs_ is a list of len source_length of [batch_size, source_length]
@@ -458,4 +460,4 @@ class NeuralCombOptNet(nn.Module):
 
         chosen_events = chosen_events[:, 1:]
         chosen_events = chosen_events.numpy()
-        return chosen_events, log_probs
+        return chosen_events, log_probs, t2 - t1

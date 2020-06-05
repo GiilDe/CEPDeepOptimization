@@ -15,7 +15,7 @@ device = torch.device(dev)
 
 batch_size = 128
 
-UNFOUND_MATCHES_PENALTY = 3
+UNFOUND_MATCHES_PENALTY = 10
 REQUIRED_MATCHES_PORTION = 0.6
 
 FULL_WINDOW_COMPLEXITY = \
@@ -216,6 +216,9 @@ def get_rewards(matches: typing.List, chosen_events: np.ndarray,
             whole_time, filtered_time = get_time(i)
             batches_whole_time += whole_time
             batches_filtered_time += filtered_time
+            if i == 0:
+                first_whole_time = whole_time
+                first_filtered_time = filtered_time
         denominator += window_complexity_ratio
         matches_num, found_matches_num = get_window_matches(i)
         matches_sum += matches_num
@@ -235,9 +238,7 @@ def get_rewards(matches: typing.List, chosen_events: np.ndarray,
     denominator = denominator / batch_size
 
     if not is_train:
-        batches_whole_time = batches_whole_time / batch_size
-        batches_filtered_time = batches_filtered_time / batch_size
         return rewards, chosen_events_num, found_matches_portions, actual_found_matches_portion, denominator, \
-            batches_whole_time, batches_filtered_time
+            batches_whole_time, batches_filtered_time, first_whole_time, first_filtered_time
     else:
         return rewards, chosen_events_num, found_matches_portions, actual_found_matches_portion, denominator
