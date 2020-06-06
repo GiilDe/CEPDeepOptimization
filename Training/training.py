@@ -18,7 +18,7 @@ steps = 1
 train_size = int(constants['train_size'] * steps / constants['window_size'])
 test_size = int(constants['test_size'] * steps / constants['window_size'])
 
-model_path = "training_data/net"
+checkpoint_path = "training_data/checkpoint"
 batch_interval = 1000
 
 batch_interval = int(batch_interval / dataset.batch_size) * dataset.batch_size
@@ -155,7 +155,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             'rewards': epochs_rewards,
             'critic': critic_exp_mvg_avg,
             'test_rewards': test_rewards
-        }, model_path + "_" + str(epoch))
+        }, checkpoint_path + "_" + str(epoch))
 
         print("train rewards: " + str(epochs_rewards))
         net_test(net, epoch, log_file)
