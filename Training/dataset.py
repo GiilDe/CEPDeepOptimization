@@ -15,7 +15,7 @@ device = torch.device(dev)
 
 batch_size = 128
 
-UNFOUND_MATCHES_PENALTY = 10
+UNFOUND_MATCHES_PENALTY = 2
 REQUIRED_MATCHES_PORTION = 0.6
 
 FULL_WINDOW_COMPLEXITY = \
@@ -42,7 +42,8 @@ def get_batch_matches(M):
 
 def get_batch_events(X):
     def get_dummies(x):
-        padding = pd.DataFrame([['A', -1], ['B', -1], ['C', -1], ['D', -1], ['E', -1], ['F', -1], ['G', -1], ['H', -1]])
+        padding = pd.DataFrame([['A', -1], ['B', -1], ['C', -1], ['D', -1],
+                                ['E', -1], ['F', -1], ['G', -1], ['H', -1]])
         x = padding.append(x, ignore_index=True)
         x = pd.get_dummies(x)
         x = x.drop(axis=0, labels=[0, 1, 2, 3, 4, 5, 6, 7])
@@ -233,12 +234,12 @@ def get_rewards(matches: typing.List, chosen_events: np.ndarray,
         rewards.append(reward)
 
     rewards = torch.tensor(rewards, device=device)
-    chosen_events_num = np.sum(chosen_events, axis=1)
     actual_found_matches_portion = found_matches_sum / matches_sum
     denominator = denominator / batch_size
 
+    res = (rewards, found_matches_portions, actual_found_matches_portion, denominator)
     if not is_train:
-        return rewards, chosen_events_num, found_matches_portions, actual_found_matches_portion, denominator, \
-            batches_whole_time, batches_filtered_time, first_whole_time, first_filtered_time
-    else:
-        return rewards, chosen_events_num, found_matches_portions, actual_found_matches_portion, denominator
+        res = res + (batches_whole_time, batches_filtered_time, first_whole_time, first_filtered_time)
+
+    return res
+

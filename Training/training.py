@@ -82,7 +82,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
     details += "------------"
     print(details)
     log_file.write(details)
-
+    chosen = False
     net.to(device=dataset.device)
     while epoch < epochs:
         epoch_average_reward = 0
@@ -95,16 +95,19 @@ def net_train(epochs, net, load_path=None, critic_net=None):
         if use_time_ratio:
             e = dataset.get_batch_events_as_events(E)
         i = -1
-        # while x is not None and m is not None:
-        while False:
+        while x is not None and m is not None:
             if steps != 1:
                 print("\n~new batch~\n")
             for _ in range(steps):
                 chosen_events, log_probs, net_time = net.forward(x)
-                rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion, denominator = \
+                rewards, found_matches_portions, found_matches_portion, denominator = \
                     dataset.get_rewards(m, chosen_events, e if use_time_ratio else None)
+                batches_chosen_events_num = np.sum(chosen_events, axis=1)
                 epoch_average_reward += rewards.mean().item()
                 chosen_events_num = np.mean(batches_chosen_events_num)
+                if chosen is False and chosen_events_num > constants['window_size'] - 1:
+                    chosen = True
+                    torch.save({'choose_all_events_net': net.state_dict()}, "training_data/choose_all_events_net")
                 if critic_net is not None:
                     critic_out = critic_net(x.detach())
                 else:
@@ -135,9 +138,8 @@ def net_train(epochs, net, load_path=None, critic_net=None):
                 else:
                     critic_exp_mvg_avg = critic_exp_mvg_avg.detach()
 
-                print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch,
-                               found_matches_portion, found_matches_portions, log_file, processed_events, rewards,
-                               train_size, denominator)
+                print_interval(chosen_events, epoch, found_matches_portion, found_matches_portions, log_file, processed_events,
+                               rewards, test_size, denominator, is_validation=True, net_time=net_time)
 
                 processed_events += dataset.batch_size
             x, m, e = dataset.get_batch_events(X), dataset.get_batch_matches(M), None
@@ -148,6 +150,13 @@ def net_train(epochs, net, load_path=None, critic_net=None):
 
         epoch_average_reward = epoch_average_reward / i
         epochs_rewards.append(epoch_average_reward)
+
+        print("train rewards: " + str(epochs_rewards))
+        net_test(net, epoch, log_file)
+        print("test rewards: " + str(test_rewards))
+
+        epoch += 1
+
         torch.save({
             'epoch': epoch,
             'model_state_dict': net.state_dict(),
@@ -157,19 +166,15 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             'test_rewards': test_rewards
         }, checkpoint_path + "_" + str(epoch))
 
-        print("train rewards: " + str(epochs_rewards))
-        net_test(net, epoch, log_file)
-        print("test rewards: " + str(test_rewards))
-
-        epoch += 1
-
     log_file.close()
 
 
-def print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch, found_matches_portion,
-                   found_matches_portions, log_file, processed_events, rewards, size, denominator, is_validation=False,
+def print_interval(chosen_events, epoch, found_matches_portion, found_matches_portions,
+                   log_file, processed_events, rewards, size, denominator, is_validation=False,
                    net_time=None, cep_whole_time=None, cep_filtered_time=None, first_wind_net_time=None,
                    first_wind_cep_time=None, first_wind_filt_cep_time=None):
+    batches_chosen_events_num = np.sum(chosen_events, axis=1)
+    chosen_events_num = np.mean(batches_chosen_events_num)
     if processed_events % batch_interval == 0:
         if not is_validation:
             print("Epoch " + str(epoch) + ": Processed " + str(processed_events) + " out of " +
@@ -203,7 +208,7 @@ def print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, 
             log_file.write(net_time_)
 
             time_ratio = str((first_wind_filt_cep_time + first_wind_net_time) / first_wind_cep_time)
-            net_time_ = "non batched actual time portion with net = " + time_ratio + " (first window has + " \
+            net_time_ = "non batched actual time portion with net = " + time_ratio + " (first window has " \
                         + str(batches_chosen_events_num[0]) + " events" + ")"
             print(net_time_)
             log_file.write(net_time_)
@@ -216,7 +221,6 @@ test_rewards = []
 
 def net_test(net, epoch, log_file):
     global test_rewards
-    net.to(device=dataset.device)
     epoch_average_reward = 0
     X, M, E = dataset.initialize_data_x(False), dataset.initialize_data_matches(False), dataset.initialize_data_x(False)
     net.eval()
@@ -228,16 +232,15 @@ def net_test(net, epoch, log_file):
     i = -1
     while x is not None and m is not None:
         chosen_events, log_probs, net_time = net.forward(x)
-        rewards, batches_chosen_events_num, found_matches_portions, found_matches_portion, denominator, b_whole_time, \
+        rewards, found_matches_portions, found_matches_portion, denominator, b_whole_time, \
             b_filtered_time, f_whole_time, f_filtered_time = dataset.get_rewards(m, chosen_events, e, is_train=False)
-        chosen_events_num = np.mean(batches_chosen_events_num)
         epoch_average_reward += rewards.mean().item()
         _, _, first_window_net_time = net.forward(x[0, :, :].unsqueeze(0), 1)
-        print_interval(batches_chosen_events_num, chosen_events, chosen_events_num, epoch, found_matches_portion,
-                       found_matches_portions, log_file, processed_events, rewards, test_size, denominator,
-                       is_validation=True, net_time=net_time, cep_whole_time=b_whole_time,
-                       cep_filtered_time=b_filtered_time, first_wind_net_time=first_window_net_time,
-                       first_wind_cep_time=f_whole_time, first_wind_filt_cep_time=f_filtered_time)
+        print_interval(chosen_events, epoch, found_matches_portion, found_matches_portions, log_file, processed_events,
+                       rewards, test_size, denominator, is_validation=True, net_time=net_time,
+                       cep_whole_time=b_whole_time, cep_filtered_time=b_filtered_time,
+                       first_wind_net_time=first_window_net_time, first_wind_cep_time=f_whole_time,
+                       first_wind_filt_cep_time=f_filtered_time)
         processed_events += dataset.batch_size
         x, m, e = dataset.get_batch_events(X), dataset.get_batch_matches(M), \
             dataset.get_batch_events_as_events(E)
@@ -272,4 +275,4 @@ if __name__ == "__main__":
         n_process_block_iters=3
     )
     conv_model = ConvWindowToFilters(dataset.batch_size, False)
-    net_train(100, conv_model, load_path="training_data/net_0", critic_net=None)
+    net_train(100, conv_model)

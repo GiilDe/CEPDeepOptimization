@@ -45,6 +45,10 @@ public class Main {
 
     static int MATCH_SIZE = Integer.parseInt((String) CONSTANTS.get("match_size"));
 
+    static int TRAIN_SIZE = Integer.parseInt((String) CONSTANTS.get("train_size"));
+
+    static int TEST_SIZE = Integer.parseInt((String) CONSTANTS.get("test_size"));
+
     public static final EsperRuntimeConfg ESPER_RUNTIME_CONFG = new EsperRuntimeConfg().invoke();
     public static final Configuration CONFIGURATION = ESPER_RUNTIME_CONFG.getConfiguration();
     public static final EPCompiled EP_COMPILED = ESPER_RUNTIME_CONFG.getEpCompiled();
@@ -75,16 +79,16 @@ public class Main {
     public static void main(String[] s) {
         BasicConfigurator.configure();
         try {
-            writeWindowsMatches((String) CONSTANTS.get("test_stream_path"),
-                    (String) CONSTANTS.get("test_matches"));
             writeWindowsMatches((String) CONSTANTS.get("train_stream_path"),
-                    (String) CONSTANTS.get("train_matches"));
+                    (String) CONSTANTS.get("train_matches"), TRAIN_SIZE);
+            writeWindowsMatches((String) CONSTANTS.get("test_stream_path"),
+                    (String) CONSTANTS.get("test_matches"), TEST_SIZE);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    static void writeWindowsMatches(String inputPath, String matchesPath) throws IOException {
+    static void writeWindowsMatches(String inputPath, String matchesPath, int size) throws IOException {
         CSVParser eventsParser = CSVParser.parse(new FileReader(inputPath), CSVFormat.DEFAULT);
         CSVPrinter matchesPrinter = new CSVPrinter(new FileWriter(matchesPath), CSVFormat.EXCEL);
 
@@ -94,6 +98,7 @@ public class Main {
 
         Iterator<CSVRecord> events = eventsParser.iterator();
 
+        Boolean first = true;
         boolean finished = false;
         int progress = 0;
         while (true) {
@@ -140,7 +145,7 @@ public class Main {
             partition(runtime);
 
             progress += windowSize;
-            printProgress(startTime, progress);
+            printProgress(startTime, progress, first, size);
         }
 
         currentMatches.clear();
@@ -157,7 +162,7 @@ public class Main {
         }
     }
 
-    private static void printProgress(long startTime, int count) {
+    private static void printProgress(long startTime, int count, Boolean first, int size) {
         if(count % toPrintTime == 0){
             System.out.println(count);
             long currentTime = System.currentTimeMillis();
@@ -165,6 +170,9 @@ public class Main {
             double minPassed = secPassed/60;
             System.out.println("Time passed: " + secPassed + " secs");
             System.out.println("Time passed: " + minPassed + " mins");
+            double speed = count/minPassed;
+            double estimatedMins = size/speed;
+            System.out.println("Estimated minutes to finish: " + estimatedMins);
         }
     }
 
