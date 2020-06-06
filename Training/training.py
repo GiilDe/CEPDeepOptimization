@@ -67,6 +67,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         epoch = checkpoint['epoch']
         epochs_rewards = checkpoint['rewards']
+        critic_exp_mvg_avg = checkpoint['critic']
 
     details = "starting training with:\n"
     details += "penalty = " + str(dataset.UNFOUND_MATCHES_PENALTY) + "\n"
@@ -149,6 +150,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             'model_state_dict': net.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'rewards': epochs_rewards,
+            'critic': critic_exp_mvg_avg,
         }, model_path + "_" + str(epoch))
 
         print("train rewards: " + str(epochs_rewards))
@@ -266,4 +268,4 @@ if __name__ == "__main__":
         n_process_block_iters=3
     )
     conv_model = ConvWindowToFilters(dataset.batch_size, False)
-    net_train(100, conv_model, critic_net=None)
+    net_train(100, conv_model,load_path="training_data/net_3", critic_net=None)
