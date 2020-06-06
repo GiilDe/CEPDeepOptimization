@@ -64,9 +64,11 @@ def net_train(epochs, net, load_path=None, critic_net=None):
     if load_path is not None:
         checkpoint = torch.load(load_path)
         net.load_state_dict(checkpoint['model_state_dict'])
+        net.to(device=dataset.device)
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         epoch = checkpoint['epoch']
         epochs_rewards = checkpoint['rewards']
+        test_rewards = checkpoint['test_rewards']
         critic_exp_mvg_avg = checkpoint['critic']
 
     details = "starting training with:\n"
@@ -93,7 +95,8 @@ def net_train(epochs, net, load_path=None, critic_net=None):
         if use_time_ratio:
             e = dataset.get_batch_events_as_events(E)
         i = -1
-        while x is not None and m is not None:
+        # while x is not None and m is not None:
+        while False:
             if steps != 1:
                 print("\n~new batch~\n")
             for _ in range(steps):
@@ -151,6 +154,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             'optimizer_state_dict': optimizer.state_dict(),
             'rewards': epochs_rewards,
             'critic': critic_exp_mvg_avg,
+            'test_rewards': test_rewards
         }, model_path + "_" + str(epoch))
 
         print("train rewards: " + str(epochs_rewards))
@@ -268,4 +272,4 @@ if __name__ == "__main__":
         n_process_block_iters=3
     )
     conv_model = ConvWindowToFilters(dataset.batch_size, False)
-    net_train(100, conv_model,load_path="training_data/net_3", critic_net=None)
+    net_train(100, conv_model, load_path="training_data/net_0", critic_net=None)
