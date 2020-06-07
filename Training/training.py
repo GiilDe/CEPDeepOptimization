@@ -139,7 +139,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
                     critic_exp_mvg_avg = critic_exp_mvg_avg.detach()
 
                 print_interval(chosen_events, epoch, found_matches_portion, found_matches_portions, log_file,
-                               processed_events, rewards, test_size, denominator)
+                               processed_events, rewards, train_size, denominator)
 
                 processed_events += dataset.batch_size
             x, m, e = dataset.get_batch_events(X), dataset.get_batch_matches(M), None
