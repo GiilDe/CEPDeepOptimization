@@ -13,7 +13,7 @@ dev = "cuda" if allow_gpu and torch.cuda.is_available() else "cpu"
 
 device = torch.device(dev)
 
-batch_size = 128
+batch_size = 32
 
 UNFOUND_MATCHES_PENALTY = 2
 REQUIRED_MATCHES_PORTION = 0.6
