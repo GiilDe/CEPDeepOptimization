@@ -6,6 +6,7 @@ import dataset
 from constants import constants
 import time
 
+
 class Encoder(nn.Module):
     """Maps a graph represented as an input sequence
     to a hidden vector"""
@@ -173,6 +174,7 @@ class Decoder(nn.Module):
         if self.use_cuda:
             finished_batches_mask = finished_batches_mask.cuda()
 
+        zeros = torch.zeros_like(finished_batches_mask)
         for _ in range(self.max_length):
             hx, cx, probs, chosen_elements_mask = recurrence(decoder_input, hidden, chosen_elements_mask, idxs)
             hidden = (hx, cx)
@@ -181,7 +183,10 @@ class Decoder(nn.Module):
 
             idxs = idxs * finished_batches_mask
             finished_batches_mask = finished_batches_mask * idxs.bool().int()
-
+            # if torch.equal(finished_batches_mask, zeros):
+            #     outputs += [0] * (self.max_length - len(outputs))
+            #     selections += [0] * (self.max_length - len(selections))
+            #     break
             decoder_input = embedded_inputs[idxs.data, range(batch_size), :]
             # use outs to point to next object
             outputs.append(probs)
@@ -379,7 +384,7 @@ class NeuralCombOptNet(nn.Module):
 
         self.padding_value = padding_value
 
-    def forward(self, inputs):
+    def forward(self, inputs, b=None):
         """
         Args:
             inputs: [batch_size, input_dim, source_length]
