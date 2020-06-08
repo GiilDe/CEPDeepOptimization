@@ -37,7 +37,7 @@ def get_pointer_net_optimizer(net):
 
 
 def get_linear_net_optimizer(net):
-    lr = 0.0002
+    lr = 0.001
     return optim.Adam(net.parameters(), lr=lr), lr
 
 
@@ -65,7 +65,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
         checkpoint = torch.load(load_path)
         net.load_state_dict(checkpoint['model_state_dict'])
         net.to(device=dataset.device)
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         epoch = checkpoint['epoch']
         epochs_rewards = checkpoint['rewards']
         test_rewards = checkpoint['test_rewards']
@@ -275,4 +275,4 @@ if __name__ == "__main__":
         n_process_block_iters=3
     )
     conv_model = ConvWindowToFilters(dataset.batch_size, False)
-    net_train(100, pointer_net)
+    net_train(100, conv_model, load_path="training_data/checkpoint_1")

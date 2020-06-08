@@ -42,25 +42,44 @@ def sample_events(events_probs, batch_size, use_unchosen_probs=True):
     return chosen_events_np, log_probs
 
 
+class DummyModel(nn.Module):
+    def __init__(self, batch_size):
+        super(DummyModel, self).__init__()
+        self.batch_size = batch_size
+
+    def forward(self, events):
+        # chosen_events = np.ones((self.batch_size, constants['window_size']))
+        # for i in range(self.batch_size):
+        #     chosen_events[i, :4] = 0
+        #     chosen_events[i, -4:] = 0
+
+        chosen_events = np.zeros((self.batch_size, constants['window_size']))
+        for i in range(self.batch_size):
+            batch_chosen_events = np.random.choice(a=range(constants['window_size']), size=20, replace=False)
+            chosen_events[i, batch_chosen_events] = 1
+
+        return chosen_events, torch.full(size=(self.batch_size,), fill_value=-2)
+
+
 class ConvWindowToFilters(nn.Module):
     def __init__(self, batch_size, use_dropout):
         super(ConvWindowToFilters, self).__init__()
         self.conv = nn.Sequential(
-            nn.Conv1d(constants['event_size'], 6, kernel_size=5),
+            nn.Conv1d(constants['event_size'], 6, kernel_size=3),
             nn.ReLU(inplace=True),
-            nn.Conv1d(6, 5, kernel_size=5),
+            nn.Conv1d(6, 5, kernel_size=3),
             nn.ReLU(inplace=True),
-            nn.Conv1d(5, 4, kernel_size=5),
+            nn.Conv1d(5, 4, kernel_size=3),
             nn.ReLU(inplace=True),
-            nn.Conv1d(4, 3, kernel_size=5),
+            nn.Conv1d(4, 3, kernel_size=3),
             nn.ReLU(inplace=True),
         ).double()
         fc_mods = []
-        fc_mods += get_fc_layer(702, 620, use_dropout)
-        fc_mods += get_fc_layer(620, 540, use_dropout)
-        fc_mods += get_fc_layer(540, 460, use_dropout)
-        fc_mods += get_fc_layer(460, 400, use_dropout)
-        fc = nn.Linear(400, constants['window_size'])
+        fc_mods += get_fc_layer(276, 230, use_dropout)
+        fc_mods += get_fc_layer(230, 180, use_dropout)
+        fc_mods += get_fc_layer(180, 150, use_dropout)
+        fc_mods += get_fc_layer(150, 130, use_dropout)
+        fc = nn.Linear(130, constants['window_size'])
         fc_mods.append(fc)
         sigmoid = nn.Sigmoid()
         fc_mods.append(sigmoid)
@@ -73,7 +92,7 @@ class ConvWindowToFilters(nn.Module):
         events = events.transpose(1, 2)
         t1 = time.perf_counter()
         features = self.conv(events)
-        features = features.reshape((batch_size, 702)).double()
+        features = features.reshape((batch_size, 276)).double()
         probs = self.fc(features)
         t2 = time.perf_counter()
         chosen_events, log_probs = sample_events(probs, batch_size)
