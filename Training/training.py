@@ -44,7 +44,7 @@ def get_linear_net_optimizer(net):
 def net_train(epochs, net, load_path=None, critic_net=None):
     global test_rewards
 
-    def save_checkpoint(s=None):
+    def save_checkpoint(_prev_i=None):
         torch.save({
             'epoch': epoch,
             'model_state_dict': net.state_dict(),
@@ -52,7 +52,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             'rewards': epochs_rewards,
             'critic': critic_exp_mvg_avg,
             'test_rewards': test_rewards,
-            'step': s,
+            'prev_i': _prev_i,
             'epoch_avg_reward': epoch_average_reward,
             'processed_events': processed_events
         }, checkpoint_path + "_" + str(epoch) + (("_" + str(s)) if s is not None else ""))
@@ -72,7 +72,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
 
     log_file = open(constants['train_log_file'], "w") if load_path is None else open(constants['train_log_file'], "a")
 
-    step = None
+    prev_i = None
     if load_path is not None:
         checkpoint = torch.load(load_path)
         net.load_state_dict(checkpoint['model_state_dict'])
@@ -82,7 +82,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
         epochs_rewards = checkpoint['rewards']
         test_rewards = checkpoint['test_rewards']
         critic_exp_mvg_avg = checkpoint['critic']
-        step = checkpoint['step']
+        prev_i = checkpoint['prev_i']
         epoch_average_reward = checkpoint['epoch_avg_reward']
         processed_events = checkpoint['processed_events']
 
@@ -105,21 +105,21 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             E = dataset.initialize_data_x(True)
         net.train()
         i = -1
-        if step is None:
+        if prev_i is None:
             processed_events = 0
             epoch_average_reward = 0
             x, m, e = dataset.get_batch_events(X), dataset.get_batch_matches(M), None
             if use_time_ratio:
                 e = dataset.get_batch_events_as_events(E)
         else:
-            while i != step:
+            while i != prev_i:
                 x, m, e = dataset.get_batch_events(X), dataset.get_batch_matches(M), None
                 if use_time_ratio:
                     e = dataset.get_batch_events_as_events(E)
                 i += 1
-            step = None
+            prev_i = None
         while x is not None and m is not None:
-            if i % 50 == 0:
+            if i % 1500 == 0:
                 save_checkpoint(i)
             chosen_events, log_probs, net_time = net.forward(x)
             rewards, found_matches_portions, found_matches_portion, denominator = \
@@ -144,7 +144,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             losses.backward()
             torch.nn.utils.clip_grad_norm_(net.parameters(), max_grad_norm, norm_type=2)
             optimizer.step()
-            # scheduler.step()
+            # scheduler.prev_i()
 
             if critic_net is not None:
                 rewards = rewards.detach()
