@@ -82,9 +82,9 @@ def net_train(epochs, net, load_path=None, critic_net=None):
         epochs_rewards = checkpoint['rewards']
         test_rewards = checkpoint['test_rewards']
         critic_exp_mvg_avg = checkpoint['critic']
-        # prev_i = checkpoint['prev_i']
-        # epoch_average_reward = checkpoint['epoch_avg_reward']
-        # processed_events = checkpoint['processed_events']
+        prev_i = checkpoint['step']
+        epoch_average_reward = checkpoint['epoch_avg_reward']
+        processed_events = checkpoint['processed_events']
 
     details = "starting training with:\n"
     details += "penalty = " + str(dataset.UNFOUND_MATCHES_PENALTY) + "\n"
@@ -291,4 +291,4 @@ if __name__ == "__main__":
         n_process_block_iters=3
     )
     conv_model = ConvWindowToFilters(dataset.batch_size, False)
-    net_train(100, conv_model, load_path="training_data/checkpoint_2")
+    net_train(100, conv_model, load_path="training_data/checkpoint_2_3400")
