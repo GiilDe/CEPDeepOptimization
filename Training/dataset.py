@@ -25,19 +25,16 @@ convert_type = dict(zip(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], range(1, 9)))
 
 
 def get_batch_matches(M):
-    try:
-        batches = []
-        for _ in range(batch_size):
-            batch = M.readline()
-            if batch == "":
-                raise StopIteration
-            batch = batch.split(",")
-            for i, obj_i in enumerate(batch):
-                batch[i] = int(obj_i)
-            batches.append(batch)
-        return batches
-    except (StopIteration, RuntimeError):
-        return None
+    batches = []
+    for _ in range(batch_size):
+        batch = M.readline()
+        if batch == "":
+            return None
+        batch = batch.split(",")
+        for i, obj_i in enumerate(batch):
+            batch[i] = int(obj_i)
+        batches.append(batch)
+    return batches
 
 
 def get_batch_events(X):
@@ -55,6 +52,7 @@ def get_batch_events(X):
             .reshape((batch_size, constants['window_size'], constants['event_size']))
         return batch
     except (StopIteration, RuntimeError):
+        print(batch_)
         return None
 
 
