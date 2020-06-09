@@ -220,8 +220,12 @@ def print_interval(chosen_events, epoch, found_matches_portion, found_matches_po
             log_file.write(net_time_)
 
             time_ratio = str((first_wind_filt_cep_time + first_wind_net_time) / first_wind_cep_time)
+            net_time_no_net = "non batched actual time portion = " + str(first_wind_filt_cep_time/first_wind_cep_time) \
+                              + " (first window has " + str(batches_chosen_events_num[0]) + " events" + ")"
             net_time_ = "non batched actual time portion with net = " + time_ratio + " (first window has " \
                         + str(batches_chosen_events_num[0]) + " events" + ")"
+            print(net_time_no_net)
+            log_file.write(net_time_no_net)
             print(net_time_)
             log_file.write(net_time_)
 
