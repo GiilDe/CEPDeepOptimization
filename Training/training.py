@@ -37,11 +37,13 @@ def get_pointer_net_optimizer(net):
 
 
 def get_linear_net_optimizer(net):
-    lr = 0.001
+    lr = 0.0002
     return optim.Adam(net.parameters(), lr=lr), lr
 
 
 def net_train(epochs, net, load_path=None, critic_net=None):
+    global test_rewards
+
     def save_checkpoint(s=None):
         torch.save({
             'epoch': epoch,
@@ -55,12 +57,8 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             'processed_events': processed_events
         }, checkpoint_path + "_" + str(epoch) + (("_" + str(s)) if s is not None else ""))
 
-    global test_rewards
     optimizer, learning_rate = get_pointer_net_optimizer(net) if type(net) == NeuralCombOptNet else \
         get_linear_net_optimizer(net)
-
-    # scheduler = lr_scheduler.MultiStepLR(optimizer, range(decay_step, decay_step * 1000, decay_step),
-    #                                      gamma=decay_rate)
 
     if critic_net is not None:
         critic_optim = optim.Adam(critic_net.parameters(), lr=learning_rate)
