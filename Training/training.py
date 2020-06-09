@@ -291,4 +291,4 @@ if __name__ == "__main__":
         n_process_block_iters=3
     )
     conv_model = ConvWindowToFilters(dataset.batch_size, False)
-    net_train(100, conv_model, load_path="training_data/checkpoint_1")
+    net_train(100, conv_model, load_path="training_data/checkpoint_2_3400")
