@@ -55,7 +55,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             'prev_i': _prev_i,
             'epoch_avg_reward': epoch_average_reward,
             'processed_events': processed_events
-        }, checkpoint_path + "_" + str(epoch) + (("_" + str(s)) if s is not None else ""))
+        }, checkpoint_path + "_" + str(epoch) + (("_" + str(_prev_i)) if _prev_i is not None else ""))
 
     optimizer, learning_rate = get_pointer_net_optimizer(net) if type(net) == NeuralCombOptNet else \
         get_linear_net_optimizer(net)
@@ -82,7 +82,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
         epochs_rewards = checkpoint['rewards']
         test_rewards = checkpoint['test_rewards']
         critic_exp_mvg_avg = checkpoint['critic']
-        prev_i = checkpoint['prev_i']
+        prev_i = checkpoint['step']
         epoch_average_reward = checkpoint['epoch_avg_reward']
         processed_events = checkpoint['processed_events']
 
