@@ -85,7 +85,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
         test_rewards = checkpoint['test_rewards']
         critic_exp_mvg_avg = checkpoint['critic']
         step = checkpoint['step']
-        epoch_average_reward = checkpoint['epoch_average_reward']
+        epoch_average_reward = checkpoint['epoch_avg_reward']
         processed_events = checkpoint['processed_events']
 
     details = "starting training with:\n"
@@ -99,7 +99,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
     details += "------------"
     print(details)
     log_file.write(details)
-    chosen = False
+
     net.to(device=dataset.device)
     while epoch < epochs:
         X, M = dataset.initialize_data_x(True), dataset.initialize_data_matches(True)
@@ -119,18 +119,16 @@ def net_train(epochs, net, load_path=None, critic_net=None):
                 if use_time_ratio:
                     e = dataset.get_batch_events_as_events(E)
                 i += 1
+            step = None
         while x is not None and m is not None:
             if i % 50 == 0:
                 save_checkpoint(i)
             chosen_events, log_probs, net_time = net.forward(x)
             rewards, found_matches_portions, found_matches_portion, denominator = \
                 dataset.get_rewards(m, chosen_events, e if use_time_ratio else None)
-            batches_chosen_events_num = np.sum(chosen_events, axis=1)
+
             epoch_average_reward += rewards.mean().item()
-            chosen_events_num = np.mean(batches_chosen_events_num)
-            if chosen is False and chosen_events_num > constants['window_size'] - 1:
-                chosen = True
-                torch.save({'choose_all_events_net': net.state_dict()}, "training_data/choose_all_events_net")
+
             if critic_net is not None:
                 critic_out = critic_net(x.detach())
             else:
