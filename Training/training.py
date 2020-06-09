@@ -42,6 +42,19 @@ def get_linear_net_optimizer(net):
 
 
 def net_train(epochs, net, load_path=None, critic_net=None):
+    def save_checkpoint(s=None):
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': net.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'rewards': epochs_rewards,
+            'critic': critic_exp_mvg_avg,
+            'test_rewards': test_rewards,
+            'step': s,
+            'epoch_avg_reward': epoch_average_reward,
+            'processed_events': processed_events
+        }, checkpoint_path + "_" + str(epoch) + (("_" + str(s)) if s is not None else ""))
+
     global test_rewards
     optimizer, learning_rate = get_pointer_net_optimizer(net) if type(net) == NeuralCombOptNet else \
         get_linear_net_optimizer(net)
@@ -61,15 +74,19 @@ def net_train(epochs, net, load_path=None, critic_net=None):
 
     log_file = open(constants['train_log_file'], "w") if load_path is None else open(constants['train_log_file'], "a")
 
+    step = None
     if load_path is not None:
         checkpoint = torch.load(load_path)
         net.load_state_dict(checkpoint['model_state_dict'])
         net.to(device=dataset.device)
-        # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         epoch = checkpoint['epoch']
         epochs_rewards = checkpoint['rewards']
         test_rewards = checkpoint['test_rewards']
         critic_exp_mvg_avg = checkpoint['critic']
+        step = checkpoint['step']
+        epoch_average_reward = checkpoint['epoch_average_reward']
+        processed_events = checkpoint['processed_events']
 
     details = "starting training with:\n"
     details += "penalty = " + str(dataset.UNFOUND_MATCHES_PENALTY) + "\n"
@@ -85,63 +102,69 @@ def net_train(epochs, net, load_path=None, critic_net=None):
     chosen = False
     net.to(device=dataset.device)
     while epoch < epochs:
-        epoch_average_reward = 0
         X, M = dataset.initialize_data_x(True), dataset.initialize_data_matches(True)
         if use_time_ratio:
             E = dataset.initialize_data_x(True)
         net.train()
-        processed_events = 0
-        x, m, e = dataset.get_batch_events(X), dataset.get_batch_matches(M), None
-        if use_time_ratio:
-            e = dataset.get_batch_events_as_events(E)
         i = -1
+        if step is None:
+            processed_events = 0
+            epoch_average_reward = 0
+            x, m, e = dataset.get_batch_events(X), dataset.get_batch_matches(M), None
+            if use_time_ratio:
+                e = dataset.get_batch_events_as_events(E)
+        else:
+            while i != step:
+                x, m, e = dataset.get_batch_events(X), dataset.get_batch_matches(M), None
+                if use_time_ratio:
+                    e = dataset.get_batch_events_as_events(E)
+                i += 1
         while x is not None and m is not None:
-            if steps != 1:
-                print("\n~new batch~\n")
-            for _ in range(steps):
-                chosen_events, log_probs, net_time = net.forward(x)
-                rewards, found_matches_portions, found_matches_portion, denominator = \
-                    dataset.get_rewards(m, chosen_events, e if use_time_ratio else None)
-                batches_chosen_events_num = np.sum(chosen_events, axis=1)
-                epoch_average_reward += rewards.mean().item()
-                chosen_events_num = np.mean(batches_chosen_events_num)
-                if chosen is False and chosen_events_num > constants['window_size'] - 1:
-                    chosen = True
-                    torch.save({'choose_all_events_net': net.state_dict()}, "training_data/choose_all_events_net")
-                if critic_net is not None:
-                    critic_out = critic_net(x.detach())
+            if i % 50 == 0:
+                save_checkpoint(i)
+            chosen_events, log_probs, net_time = net.forward(x)
+            rewards, found_matches_portions, found_matches_portion, denominator = \
+                dataset.get_rewards(m, chosen_events, e if use_time_ratio else None)
+            batches_chosen_events_num = np.sum(chosen_events, axis=1)
+            epoch_average_reward += rewards.mean().item()
+            chosen_events_num = np.mean(batches_chosen_events_num)
+            if chosen is False and chosen_events_num > constants['window_size'] - 1:
+                chosen = True
+                torch.save({'choose_all_events_net': net.state_dict()}, "training_data/choose_all_events_net")
+            if critic_net is not None:
+                critic_out = critic_net(x.detach())
+            else:
+                if processed_events == 0:
+                    critic_exp_mvg_avg = rewards.mean()
                 else:
-                    if processed_events == 0:
-                        critic_exp_mvg_avg = rewards.mean()
-                    else:
-                        critic_exp_mvg_avg = (critic_exp_mvg_avg * beta) + ((1. - beta) * rewards.mean())
+                    critic_exp_mvg_avg = (critic_exp_mvg_avg * beta) + ((1. - beta) * rewards.mean())
 
-                normalizer = critic_out if critic_net is not None else critic_exp_mvg_avg
-                advantage = rewards - normalizer
+            normalizer = critic_out if critic_net is not None else critic_exp_mvg_avg
+            advantage = rewards - normalizer
 
-                optimizer.zero_grad()
-                losses = (-1) * log_probs * advantage.detach()
-                losses = losses.mean()
-                losses.backward()
-                torch.nn.utils.clip_grad_norm_(net.parameters(), max_grad_norm, norm_type=2)
-                optimizer.step()
-                # scheduler.step()
+            optimizer.zero_grad()
+            losses = (-1) * log_probs * advantage.detach()
+            losses = losses.mean()
+            losses.backward()
+            torch.nn.utils.clip_grad_norm_(net.parameters(), max_grad_norm, norm_type=2)
+            optimizer.step()
+            # scheduler.step()
 
-                if critic_net is not None:
-                    rewards = rewards.detach()
-                    critic_optim.zero_grad()
-                    critic_loss = critic_mse(critic_out, rewards)
-                    critic_loss.backward()
-                    torch.nn.utils.clip_grad_norm_(critic_net.parameters(), max_grad_norm, norm_type=2)
-                    critic_optim.step()
-                    critic_scheduler.step()
-                else:
-                    critic_exp_mvg_avg = critic_exp_mvg_avg.detach()
+            if critic_net is not None:
+                rewards = rewards.detach()
+                critic_optim.zero_grad()
+                critic_loss = critic_mse(critic_out, rewards)
+                critic_loss.backward()
+                torch.nn.utils.clip_grad_norm_(critic_net.parameters(), max_grad_norm, norm_type=2)
+                critic_optim.step()
+                critic_scheduler.step()
+            else:
+                critic_exp_mvg_avg = critic_exp_mvg_avg.detach()
 
-                print_interval(chosen_events, epoch, found_matches_portion, found_matches_portions, log_file,
-                               processed_events, rewards, train_size, denominator)
+            print_interval(chosen_events, epoch, found_matches_portion, found_matches_portions, log_file,
+                           processed_events, rewards, train_size, denominator)
 
-                processed_events += dataset.batch_size
+            processed_events += dataset.batch_size
             x, m, e = dataset.get_batch_events(X), dataset.get_batch_matches(M), None
             if use_time_ratio:
                 e = dataset.get_batch_events_as_events(E)
@@ -157,14 +180,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
 
         epoch += 1
 
-        torch.save({
-            'epoch': epoch,
-            'model_state_dict': net.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'rewards': epochs_rewards,
-            'critic': critic_exp_mvg_avg,
-            'test_rewards': test_rewards
-        }, checkpoint_path + "_" + str(epoch))
+        save_checkpoint()
 
     log_file.close()
 
