@@ -53,8 +53,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             'critic': critic_exp_mvg_avg,
             'test_rewards': test_rewards,
             'prev_i': _prev_i,
-            'epoch_avg_reward': epoch_average_reward,
-            'processed_events': processed_events
+            'epoch_avg_reward': epoch_average_reward
         }, checkpoint_path + "_" + str(epoch) + (("_" + str(_prev_i)) if _prev_i is not None else ""))
 
     optimizer, learning_rate = get_pointer_net_optimizer(net) if type(net) == NeuralCombOptNet else \
@@ -82,9 +81,8 @@ def net_train(epochs, net, load_path=None, critic_net=None):
         epochs_rewards = checkpoint['rewards']
         test_rewards = checkpoint['test_rewards']
         critic_exp_mvg_avg = checkpoint['critic']
-        prev_i = checkpoint['step']
+        prev_i = checkpoint['prev_i']
         epoch_average_reward = checkpoint['epoch_avg_reward']
-        processed_events = checkpoint['processed_events']
 
     details = "starting training with:\n"
     details += "penalty = " + str(dataset.UNFOUND_MATCHES_PENALTY) + "\n"
@@ -105,8 +103,8 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             E = dataset.initialize_data_x(True)
         net.train()
         i = -1
+        processed_events = 0
         if prev_i is None:
-            processed_events = 0
             epoch_average_reward = 0
             x, m, e = dataset.get_batch_events(X), dataset.get_batch_matches(M), None
             if use_time_ratio:
@@ -117,6 +115,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
                 if use_time_ratio:
                     e = dataset.get_batch_events_as_events(E)
                 i += 1
+                processed_events += dataset.batch_size
             prev_i = None
         while x is not None and m is not None:
             if i % 1500 == 0:
