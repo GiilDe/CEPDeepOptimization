@@ -104,12 +104,13 @@ class LinearWindowToFilters(nn.Module):
         super(LinearWindowToFilters, self).__init__()
         modules = []
         # constants['event_size'] * constants['window_size'] = 150
-        modules += get_fc_layer(constants['event_size'] * constants['window_size'], 130, use_dropout)
-        modules += get_fc_layer(130, 110, use_dropout)
-        modules += get_fc_layer(110, 90, use_dropout)
-        modules += get_fc_layer(90, 70, use_dropout)
-        modules += get_fc_layer(70, 50, use_dropout)
-        modules += [nn.Linear(50, constants['window_size'])]
+        modules += get_fc_layer(constants['event_size'] * constants['window_size'], 750, use_dropout)
+        modules += get_fc_layer(750, 600, use_dropout)
+        modules += get_fc_layer(600, 450, use_dropout)
+        modules += get_fc_layer(450, 300, use_dropout)
+        modules += get_fc_layer(300, 200, use_dropout)
+        modules += get_fc_layer(200, 150, use_dropout)
+        modules += [nn.Linear(150, constants['window_size'])]
         modules += [nn.Sigmoid()]
         self.probs_net = nn.Sequential(*modules)
         self.probs_net.double()
@@ -118,5 +119,8 @@ class LinearWindowToFilters(nn.Module):
     def forward(self, events):
         # events/events_probs dims: (batch_size, window_size)
         events = events.reshape((self.batch_size, constants['window_size'] * constants['event_size']))
+        t1 = time.perf_counter()
         events_probs = self.probs_net(events)
-        return sample_events(events_probs, self.batch_size)
+        t2 = time.perf_counter()
+        chosen_events, log_probs = sample_events(events_probs, self.batch_size)
+        return chosen_events, log_probs, t2 - t1

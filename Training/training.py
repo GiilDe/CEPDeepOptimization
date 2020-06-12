@@ -141,7 +141,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             losses = (-1) * log_probs * advantage.detach()
             losses = losses.mean()
             losses.backward()
-            torch.nn.utils.clip_grad_norm_(net.parameters(), max_grad_norm, norm_type=2)
+            # torch.nn.utils.clip_grad_norm_(net.parameters(), max_grad_norm, norm_type=2)
             optimizer.step()
             # scheduler.prev_i()
 
@@ -290,4 +290,4 @@ if __name__ == "__main__":
         n_process_block_iters=3
     )
     conv_model = ConvWindowToFilters(dataset.batch_size, False)
-    net_train(100, conv_model, load_path="training_data/checkpoint_2_3400")
+    net_train(100, linear_model)
