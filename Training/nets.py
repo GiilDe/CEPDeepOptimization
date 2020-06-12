@@ -116,11 +116,13 @@ class LinearWindowToFilters(nn.Module):
         self.probs_net.double()
         self.batch_size = batch_size
 
-    def forward(self, events):
+    def forward(self, events, batch_size=None):
         # events/events_probs dims: (batch_size, window_size)
-        events = events.reshape((self.batch_size, constants['window_size'] * constants['event_size']))
+        if batch_size is None:
+            batch_size = self.batch_size
+        events = events.reshape((batch_size, constants['window_size'] * constants['event_size']))
         t1 = time.perf_counter()
         events_probs = self.probs_net(events)
         t2 = time.perf_counter()
-        chosen_events, log_probs = sample_events(events_probs, self.batch_size)
+        chosen_events, log_probs = sample_events(events_probs, batch_size)
         return chosen_events, log_probs, t2 - t1
