@@ -106,8 +106,7 @@ seq_pattern_query = OpenCEP.processing_utilities. \
 cep_processor = OpenCEP.processor.TimeCalcProcessor(['count', 'type', 'value'], 0, 1, [seq_pattern_query])
 
 
-def get_rewards(matches: typing.List, chosen_events: np.ndarray,
-                window_events: typing.Union[None, pd.DataFrame] = None,
+def get_rewards(matches: typing.List, chosen_events, window_events: typing.Union[None, pd.DataFrame] = None,
                 is_train=True):
     def get_window_complexity_ratio(i):
         batch_chosen_events = chosen_events[i]
@@ -189,6 +188,7 @@ def get_rewards(matches: typing.List, chosen_events: np.ndarray,
     def unfound_match_penalty(matches_ratio):
         return UNFOUND_MATCHES_PENALTY * max(REQUIRED_MATCHES_PORTION - matches_ratio, 0)
 
+    chosen_events = chosen_events.cpu().numpy()
     get_denominator_fun = [get_window_steps_ratio, get_window_time_ratio, get_window_complexity_ratio,
                            get_window_event_num_ratio]
     found_matches_portions = []
