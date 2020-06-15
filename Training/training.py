@@ -8,6 +8,7 @@ import numpy as np
 from neural_combinatorial_rl import NeuralCombOptNet, CriticNetwork
 from nets import *
 
+
 use_time_ratio = True if dataset.time_calc_index in {0, 1} else False
 tanh_exploration = 10
 use_tanh = True
@@ -15,8 +16,8 @@ hidden_dim = 64
 
 steps = 5
 
-train_size = int(constants['train_size'] * steps / constants['window_size'])
-test_size = int(constants['test_size'] * steps / constants['window_size'])
+train_size = int((constants['train_size'] * steps) / constants['window_size'])
+test_size = int((constants['test_size'] * steps) / constants['window_size'])
 
 checkpoint_path = "training_data/checkpoint"
 batch_interval = 1000
@@ -198,41 +199,35 @@ def net_train(epochs, net, load_path=None, critic_net=None):
         while x is not None and m is not None:
             if i != 0 and i % 1500 == 0:
                 save_checkpoint(i)
+
             events_probs, net_time = net.forward(x)
 
-            rewards, found_matches_portion, denominator = 0, 0, 0
+            losses = torch.zeros(1, device=dataset.device)
             for _ in range(steps):
                 chosen_events = sample_events(events_probs)
-                _rewards, _found_matches_portions, _found_matches_portion, _denominator = \
+
+                rewards, found_matches_portions, found_matches_portion, denominator = \
                     dataset.get_rewards(m, chosen_events, e if use_time_ratio else None)
-                rewards += _rewards
-                found_matches_portion += _found_matches_portion
-                denominator += _denominator
 
-            found_matches_portions = _found_matches_portions
+                log_probs = get_log_probs(events_probs, chosen_events)
 
-            rewards /= steps
-            found_matches_portion /= steps
-            denominator /= steps
+                epoch_average_reward += rewards.mean().item()
 
-            epoch_average_reward += rewards.mean().item()
-
-            if critic_net is not None:
-                critic_out = critic_net(x.detach())
-            else:
-                if processed_events == 0:
-                    critic_exp_mvg_avg = rewards.mean()
+                if critic_net is not None:
+                    critic_out = critic_net(x.detach())
                 else:
-                    critic_exp_mvg_avg = (critic_exp_mvg_avg * beta) + ((1. - beta) * rewards.mean())
+                    if processed_events == 0:
+                        critic_exp_mvg_avg = rewards.mean()
+                    else:
+                        critic_exp_mvg_avg = (critic_exp_mvg_avg * beta) + ((1. - beta) * rewards.mean())
 
-            normalizer = critic_out if critic_net is not None else critic_exp_mvg_avg
-            advantage = rewards - normalizer
-
-            log_probs = get_log_probs(events_probs, chosen_events)
+                normalizer = critic_out if critic_net is not None else critic_exp_mvg_avg
+                advantage = rewards - normalizer
+                step_losses = (-1) * log_probs * advantage.detach()
+                step_losses = step_losses.mean()
+                losses += step_losses
 
             optimizer.zero_grad()
-            losses = (-1) * log_probs * advantage.detach()
-            losses = losses.mean()
             losses.backward()
             # torch.nn.utils.clip_grad_norm_(net.parameters(), max_grad_norm, norm_type=2)
             optimizer.step()
