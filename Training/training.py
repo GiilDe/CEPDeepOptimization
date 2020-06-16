@@ -14,7 +14,7 @@ tanh_exploration = 10
 use_tanh = True
 hidden_dim = 64
 
-steps = 5
+steps = 1
 
 train_size = int((constants['train_size'] * steps) / constants['window_size'])
 test_size = int((constants['test_size'] * steps) / constants['window_size'])
@@ -30,32 +30,6 @@ decay_rate = 0.96
 max_grad_norm = 2.0
 
 critic_mse = torch.nn.MSELoss()
-
-
-def get_log_probs(events_probs, chosen_events, use_unchosen_probs=True):
-    if use_unchosen_probs:
-        flipped_chosen_events = 1 - chosen_events
-        flipped_probs = torch.abs(flipped_chosen_events - events_probs)  # flip unchosen probabilities
-        windows_probs = torch.prod(flipped_probs, dim=1)
-        log_probs = torch.log(windows_probs)  # dims: (batch_size, 1)
-    else:
-        log_probs = torch.log(events_probs)
-        masked_log_probs = log_probs * chosen_events
-        log_probs = torch.sum(masked_log_probs, dim=1)
-    return log_probs
-
-
-def sample_events(events_probs):
-    batch_size = events_probs.size(0)
-    chosen_events = torch.empty_like(events_probs).int()
-
-    for batch_i, event_i in product(range(batch_size), range(constants['window_size'])):
-        choice = np.random.choice([0, 1], size=None, p=[1 - events_probs[batch_i, event_i].item(),
-                                                        events_probs[batch_i, event_i].item()])
-
-        chosen_events[batch_i, event_i] = torch.tensor(choice).item()
-
-    return chosen_events
 
 
 def get_pointer_net_optimizer(net):
@@ -76,6 +50,7 @@ def print_interval(chosen_events, epoch, found_matches_portion, found_matches_po
     batches_chosen_events_num = np.sum(chosen_events, axis=1)
     chosen_events_num = np.mean(batches_chosen_events_num)
     if processed_events % batch_interval == 0:
+        print("------------")
         if not is_validation:
             print("Epoch " + str(epoch) + ": Processed " + str(processed_events) + " out of " +
                   str(size))
@@ -133,7 +108,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             'test_rewards': test_rewards,
             'prev_i': _prev_i,
             'epoch_avg_reward': epoch_average_reward
-        }, checkpoint_path + "_" + str(epoch) + (("_" + str(_prev_i)) if _prev_i is not None else ""))
+        }, str(net) + checkpoint_path + "_" + str(epoch) + (("_" + str(_prev_i)) if _prev_i is not None else ""))
 
     optimizer, learning_rate = get_pointer_net_optimizer(net) if type(net) == NeuralCombOptNet else \
         get_linear_net_optimizer(net)
@@ -168,10 +143,9 @@ def net_train(epochs, net, load_path=None, critic_net=None):
     details += "lr = " + str(learning_rate) + "\n"
     details += "required matches portion = " + str(dataset.REQUIRED_MATCHES_PORTION) + "\n"
     details += "using critic net? " + ("yes" if critic_net is not None else "no (using moving average)") + "\n"
-    details += "net type: " + str(type(net)) + "\n"
+    details += "net type: " + str(net) + "\n"
     details += "steps = " + str(steps) + "\n"
     details += "time calculation: " + dataset.time_calc_types[dataset.time_calc_index] + "\n"
-    details += "------------"
     print(details)
     log_file.write(details)
 
@@ -204,12 +178,12 @@ def net_train(epochs, net, load_path=None, critic_net=None):
 
             losses = torch.zeros(1, device=dataset.device)
             for _ in range(steps):
-                chosen_events = sample_events(events_probs)
+                chosen_events = net.sample_events(events_probs)
 
                 rewards, found_matches_portions, found_matches_portion, denominator = \
                     dataset.get_rewards(m, chosen_events, e if use_time_ratio else None)
 
-                log_probs = get_log_probs(events_probs, chosen_events)
+                log_probs = net.get_log_probs(events_probs, chosen_events)
 
                 epoch_average_reward += rewards.mean().item()
 
@@ -229,7 +203,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
 
             optimizer.zero_grad()
             losses.backward()
-            # torch.nn.utils.clip_grad_norm_(net.parameters(), max_grad_norm, norm_type=2)
+            torch.nn.utils.clip_grad_norm_(net.parameters(), max_grad_norm, norm_type=2)
             optimizer.step()
             # scheduler.prev_i()
 
@@ -319,7 +293,7 @@ if __name__ == "__main__":
         padding_value=-1
     )
     linear_model = LinearWindowToFilters(dataset.batch_size)
-    network = CriticNetwork(
+    critic_network = CriticNetwork(
         input_dim=constants['event_size'],
         hidden_dim=hidden_dim,
         tanh_exploration=tanh_exploration,
@@ -328,4 +302,4 @@ if __name__ == "__main__":
         n_process_block_iters=3
     )
     conv_model = ConvWindowToFilters(dataset.batch_size, False)
-    net_train(100, conv_model)
+    net_train(100, pointer_net, critic_net=None)

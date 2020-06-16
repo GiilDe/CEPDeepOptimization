@@ -7,6 +7,32 @@ import numpy as np
 import time
 
 
+def get_log_probs(events_probs, chosen_events, use_unchosen_probs=False):
+    if use_unchosen_probs:
+        flipped_chosen_events = 1 - chosen_events
+        flipped_probs = torch.abs(flipped_chosen_events - events_probs)  # flip unchosen probabilities
+        flipped_log_probs = torch.log(flipped_probs)
+        log_probs = torch.sum(flipped_log_probs, dim=1)  # dims: (batch_size, 1)
+    else:
+        log_probs = torch.log(events_probs)
+        masked_log_probs = log_probs * chosen_events
+        log_probs = torch.sum(masked_log_probs, dim=1)
+    return log_probs
+
+
+def sample_events(events_probs):
+    batch_size = events_probs.size(0)
+    chosen_events = torch.empty_like(events_probs).int()
+
+    for batch_i, event_i in product(range(batch_size), range(constants['window_size'])):
+        choice = np.random.choice([0, 1], size=None, p=[1 - events_probs[batch_i, event_i].item(),
+                                                        events_probs[batch_i, event_i].item()])
+
+        chosen_events[batch_i, event_i] = torch.tensor(choice).item()
+
+    return chosen_events
+
+
 def get_fc_layer(in_dim, out_dim, use_dropout):
     fc = nn.Linear(in_dim, out_dim)
     b_norm = nn.BatchNorm1d(out_dim)
@@ -54,6 +80,17 @@ class ConvWindowToFilters(nn.Module):
         t2 = time.perf_counter()
         return probs, t2 - t1
 
+    def __str__(self):
+        return "conv"
+
+    @staticmethod
+    def get_log_probs(events_probs, chosen_events, use_unchosen_probs=False):
+        return get_log_probs(events_probs, chosen_events, use_unchosen_probs)
+
+    @staticmethod
+    def sample_events(events_probs):
+        return sample_events(events_probs)
+
 
 class LinearWindowToFilters(nn.Module):
     def __init__(self, batch_size, use_dropout=False):
@@ -81,3 +118,14 @@ class LinearWindowToFilters(nn.Module):
         events_probs = self.probs_net(events)
         t2 = time.perf_counter()
         return events_probs, t2 - t1
+
+    def __str__(self):
+        return "linear"
+
+    @staticmethod
+    def get_log_probs(events_probs, chosen_events, use_unchosen_probs=False):
+        return get_log_probs(events_probs, chosen_events, use_unchosen_probs)
+
+    @staticmethod
+    def sample_events(events_probs):
+        return sample_events(events_probs)

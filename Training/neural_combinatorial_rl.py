@@ -138,6 +138,7 @@ class Decoder(nn.Module):
                 Initially this is set to (enc_h[-1], enc_c[-1])
             context: encoder outputs, [source_length, batch_size, hidden_dim]
         """
+
         def recurrence(x, hidden, chosen_elements_mask, prev_idxs):
             hx, cx = hidden  # batch_size, hidden_dim
 
@@ -199,6 +200,7 @@ class Decoder(nn.Module):
 
 class PointerNetwork(nn.Module):
     """The pointer network, which is the core seq2seq model"""
+
     def __init__(self,
                  embedding_dim,
                  hidden_dim,
@@ -392,7 +394,7 @@ class NeuralCombOptNet(nn.Module):
             inputs: [batch_size, input_dim, source_length]
         """
         inputs = inputs.transpose(1, 2)
-        batch_size = inputs.size(0)
+        self.batch_size = inputs.size(0)
         # input_dim = inputs.size(1)
         source_length = inputs.size(2)
 
@@ -408,7 +410,7 @@ class NeuralCombOptNet(nn.Module):
         # repeat embeddings across batch_size
         # result is [batch_size, input_dim, embedding_dim]
         if self.embedding is not None:
-            embedding = self.embedding.repeat(batch_size, 1, 1)
+            embedding = self.embedding.repeat(self.batch_size, 1, 1)
             embedded_inputs = []
             # result is [batch_size, 1, input_dim, source_length]
             ips = inputs.unsqueeze(1)
@@ -431,13 +433,14 @@ class NeuralCombOptNet(nn.Module):
 
         t1 = time.perf_counter()
         probs_, actions_idxs = self.actor_net(embedded_inputs)
+        self.actions_idxs = actions_idxs
         t2 = time.perf_counter()
 
         if self.is_train:
             # probs_ is a list of len source_length of [batch_size, source_length]
             probs = []
             for prob, action_id in zip(probs_, actions_idxs):
-                probs.append(prob[[x for x in range(batch_size)], action_id.data])
+                probs.append(prob[[x for x in range(self.batch_size)], action_id.data])
         else:
             probs = None
 
@@ -447,11 +450,26 @@ class NeuralCombOptNet(nn.Module):
 
         # return v, probs, actions, actions_idxs
 
+        return probs, t2 - t1
+
+    def __str__(self):
+        return "pointer net"
+
+    def sample_events(self, probs):
+        chosen_events = torch.zeros((self.batch_size, constants['window_size'] + 1))
+        for i in range(constants['window_size'] + 1):
+            idxs = self.actions_idxs[i]
+            chosen_events[range(self.batch_size), idxs] = 1
+
+        chosen_events = chosen_events[:, 1:]
+        return chosen_events
+
+    def get_log_probs(self, probs, actions_idxs):
         log_probs = torch.zeros_like(probs[0], device=dataset.device)
 
         finished_batches_mask = torch.ones_like(probs[0], device=dataset.device).int()
 
-        for prob, idxs in zip(probs, actions_idxs):
+        for prob, idxs in zip(probs, self.actions_idxs):
             # compute the sum of the log probs
             # for each tour in the batch
             log_prob = torch.log(prob)
@@ -460,11 +478,4 @@ class NeuralCombOptNet(nn.Module):
             finished_batches_mask = finished_batches_mask * idxs.bool().int()
             log_probs += log_prob
 
-        chosen_events = torch.zeros((batch_size, constants['window_size'] + 1))
-        for i in range(constants['window_size'] + 1):
-            idxs = actions_idxs[i]
-            chosen_events[range(batch_size), idxs] = 1
-
-        chosen_events = chosen_events[:, 1:]
-        chosen_events = chosen_events.numpy()
-        return chosen_events, log_probs, t2 - t1
+        return log_probs
