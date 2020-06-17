@@ -88,24 +88,6 @@ def initialize_data_matches(is_train):
     return M
 
 
-# def val_smaller(A: OpenCEP.processing_utilities.Event, B: OpenCEP.processing_utilities.Event) -> bool:
-#     return A.value < B.value
-#
-#
-# cond1 = OpenCEP.processing_utilities.Condition(val_smaller, [0, 1])
-# cond2 = OpenCEP.processing_utilities.Condition(val_smaller, [1, 2])
-#
-# event_types = ['A', 'B', 'C', 'D']
-# event_types_with_identifiers = \
-#     [OpenCEP.processing_utilities.EventTypeOrPatternAndIdentifier(type, i) for i, type in enumerate(event_types)]
-# seq_event_pattern = OpenCEP.processing_utilities. \
-#     EventPattern(event_types_with_identifiers, OpenCEP.processing_utilities.Seq(range(len(event_types))))
-# seq_pattern_query = OpenCEP.processing_utilities. \
-#     CleanPatternQuery(seq_event_pattern, [cond1, cond2], time_limit=constants['pattern_window_size'])
-#
-# cep_processor = OpenCEP.processor.TimeCalcProcessor(['count', 'type', 'value'], 0, 1, [seq_pattern_query])
-
-
 def val_smaller(A: OpenCEP.processing_utilities.Event, B: OpenCEP.processing_utilities.Event) -> bool:
     return A.value < B.value
 
