@@ -1,13 +1,14 @@
 {
-  "train_stream_path": "Data/old_data/train_data_stream.txt",
-  "test_stream_path": "Data/old_data/test_data_stream.txt",
+  "train_stream_path": "Data/train_data_stream.txt",
+  "test_stream_path": "Data/test_data_stream.txt",
   "train_log_file": "Training/training_data/train_log_file.txt",
-  "train_matches": "Data/old_data/train_matches.txt",
-  "test_matches": "Data/old_data/test_matches.txt",
-  "test_size": "2000000",
-  "train_size": "20000000",
-  "pattern_window_size": "100",
-  "window_size": "250",
-  "match_size": "5",
+  "train_matches": "Data/train_matches.txt",
+  "test_matches": "Data/test_matches.txt",
+  "test_size": "20000000",
+  "train_size": "200000000",
+  "pattern_window_size": "28",
+  "window_size": "100",
+  "match_size": "4",
   "event_size": "9"
 }
+
