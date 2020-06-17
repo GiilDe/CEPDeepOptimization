@@ -7,7 +7,8 @@ import numpy as np
 import time
 
 
-def get_log_probs(events_probs, chosen_events, use_unchosen_probs=False):
+def get_log_probs(events_probs, chosen_events):
+    use_unchosen_probs = True
     if use_unchosen_probs:
         flipped_chosen_events = 1 - chosen_events
         flipped_probs = torch.abs(flipped_chosen_events - events_probs)  # flip unchosen probabilities
@@ -84,8 +85,8 @@ class ConvWindowToFilters(nn.Module):
         return "conv"
 
     @staticmethod
-    def get_log_probs(events_probs, chosen_events, use_unchosen_probs=False):
-        return get_log_probs(events_probs, chosen_events, use_unchosen_probs)
+    def get_log_probs(events_probs, chosen_events):
+        return get_log_probs(events_probs, chosen_events)
 
     @staticmethod
     def sample_events(events_probs):
@@ -123,8 +124,8 @@ class LinearWindowToFilters(nn.Module):
         return "linear"
 
     @staticmethod
-    def get_log_probs(events_probs, chosen_events, use_unchosen_probs=False):
-        return get_log_probs(events_probs, chosen_events, use_unchosen_probs)
+    def get_log_probs(events_probs, chosen_events):
+        return get_log_probs(events_probs, chosen_events)
 
     @staticmethod
     def sample_events(events_probs):

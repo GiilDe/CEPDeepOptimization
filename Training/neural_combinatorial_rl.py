@@ -433,8 +433,8 @@ class NeuralCombOptNet(nn.Module):
 
         t1 = time.perf_counter()
         probs_, actions_idxs = self.actor_net(embedded_inputs)
-        self.actions_idxs = actions_idxs
         t2 = time.perf_counter()
+        self.actions_idxs = actions_idxs
 
         if self.is_train:
             # probs_ is a list of len source_length of [batch_size, source_length]
@@ -456,7 +456,7 @@ class NeuralCombOptNet(nn.Module):
         return "pointer net"
 
     def sample_events(self, probs):
-        chosen_events = torch.zeros((self.batch_size, constants['window_size'] + 1))
+        chosen_events = torch.zeros((self.batch_size, constants['window_size'] + 1)).int()
         for i in range(constants['window_size'] + 1):
             idxs = self.actions_idxs[i]
             chosen_events[range(self.batch_size), idxs] = 1

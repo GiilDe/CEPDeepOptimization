@@ -108,7 +108,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
             'test_rewards': test_rewards,
             'prev_i': _prev_i,
             'epoch_avg_reward': epoch_average_reward
-        }, str(net) + checkpoint_path + "_" + str(epoch) + (("_" + str(_prev_i)) if _prev_i is not None else ""))
+        }, checkpoint_path + "_" + str(net) + "_" + str(epoch) + (("_" + str(_prev_i)) if _prev_i is not None else ""))
 
     optimizer, learning_rate = get_pointer_net_optimizer(net) if type(net) == NeuralCombOptNet else \
         get_linear_net_optimizer(net)
@@ -258,7 +258,7 @@ def net_test(net, epoch, log_file):
     i = -1
     while x is not None and m is not None:
         events_probs, net_time = net.forward(x)
-        chosen_events = sample_events(events_probs)
+        chosen_events = net.sample_events(events_probs)
         rewards, found_matches_portions, found_matches_portion, denominator, b_whole_time, \
             b_filtered_time, f_whole_time, f_filtered_time = dataset.get_rewards(m, chosen_events, e, is_train=False)
         epoch_average_reward += rewards.mean().item()
@@ -302,4 +302,4 @@ if __name__ == "__main__":
         n_process_block_iters=3
     )
     conv_model = ConvWindowToFilters(dataset.batch_size, False)
-    net_train(100, pointer_net, critic_net=None)
+    net_train(100, pointer_net)
