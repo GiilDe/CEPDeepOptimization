@@ -13,7 +13,7 @@ dev = "cuda" if allow_gpu and torch.cuda.is_available() else "cpu"
 
 device = torch.device(dev)
 
-batch_size = 8
+batch_size = 1
 
 UNFOUND_MATCHES_PENALTY = 0
 REQUIRED_MATCHES_PORTION = 0.6
@@ -88,20 +88,49 @@ def initialize_data_matches(is_train):
     return M
 
 
+# def val_smaller(A: OpenCEP.processing_utilities.Event, B: OpenCEP.processing_utilities.Event) -> bool:
+#     return A.value < B.value
+#
+#
+# cond1 = OpenCEP.processing_utilities.Condition(val_smaller, [0, 1])
+# cond2 = OpenCEP.processing_utilities.Condition(val_smaller, [1, 2])
+#
+# event_types = ['A', 'B', 'C', 'D']
+# event_types_with_identifiers = \
+#     [OpenCEP.processing_utilities.EventTypeOrPatternAndIdentifier(type, i) for i, type in enumerate(event_types)]
+# seq_event_pattern = OpenCEP.processing_utilities. \
+#     EventPattern(event_types_with_identifiers, OpenCEP.processing_utilities.Seq(range(len(event_types))))
+# seq_pattern_query = OpenCEP.processing_utilities. \
+#     CleanPatternQuery(seq_event_pattern, [cond1, cond2], time_limit=constants['pattern_window_size'])
+#
+# cep_processor = OpenCEP.processor.TimeCalcProcessor(['count', 'type', 'value'], 0, 1, [seq_pattern_query])
+
+
 def val_smaller(A: OpenCEP.processing_utilities.Event, B: OpenCEP.processing_utilities.Event) -> bool:
     return A.value < B.value
 
 
+def mult_val_smaller(a1: OpenCEP.processing_utilities.Event,
+                     a2: OpenCEP.processing_utilities.Event,
+                     a4: OpenCEP.processing_utilities.Event,
+                     a5: OpenCEP.processing_utilities.Event) \
+        -> bool:
+    return (2 * (a4.value + a2.value + a1.value)) < a5.value
+
+
 cond1 = OpenCEP.processing_utilities.Condition(val_smaller, [0, 1])
 cond2 = OpenCEP.processing_utilities.Condition(val_smaller, [1, 2])
+cond3 = OpenCEP.processing_utilities.Condition(val_smaller, [3, 0])
+cond4 = OpenCEP.processing_utilities.Condition(mult_val_smaller, [0, 1, 3, 4])
 
-event_types = ['A', 'B', 'C', 'D']
+
+event_types = ['A', 'B', 'C', 'D', 'E']
 event_types_with_identifiers = \
     [OpenCEP.processing_utilities.EventTypeOrPatternAndIdentifier(type, i) for i, type in enumerate(event_types)]
 seq_event_pattern = OpenCEP.processing_utilities. \
     EventPattern(event_types_with_identifiers, OpenCEP.processing_utilities.Seq(range(len(event_types))))
 seq_pattern_query = OpenCEP.processing_utilities. \
-    CleanPatternQuery(seq_event_pattern, [cond1, cond2], time_limit=constants['pattern_window_size'])
+    CleanPatternQuery(seq_event_pattern, [cond1, cond2, cond3, cond4], time_limit=constants['pattern_window_size'])
 
 cep_processor = OpenCEP.processor.TimeCalcProcessor(['count', 'type', 'value'], 0, 1, [seq_pattern_query])
 
@@ -223,7 +252,7 @@ def get_rewards(matches: typing.List, chosen_events, window_events: typing.Union
         rewards.append(reward)
 
     rewards = torch.tensor(rewards, device=device)
-    actual_found_matches_portion = found_matches_sum / matches_sum
+    actual_found_matches_portion = found_matches_sum / matches_sum if matches_sum != 0 else 1
     denominator = denominator / batch_size
 
     res = (rewards, found_matches_portions, actual_found_matches_portion, denominator)
