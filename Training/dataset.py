@@ -13,7 +13,7 @@ dev = "cuda" if allow_gpu and torch.cuda.is_available() else "cpu"
 
 device = torch.device(dev)
 
-batch_size = 128
+batch_size = 1
 
 UNFOUND_MATCHES_PENALTY = 0
 REQUIRED_MATCHES_PORTION = 0.6
@@ -104,8 +104,8 @@ seq_pattern_query = OpenCEP.processing_utilities. \
 cep_processor = OpenCEP.processor.TimeCalcProcessor(['count', 'type', 'value'], 0, 1, [seq_pattern_query])
 
 
-def get_rewards(matches: typing.List, chosen_events: np.ndarray,
-                window_events: typing.Union[None, pd.DataFrame] = None,
+
+def get_rewards(matches: typing.List, chosen_events, window_events: typing.Union[None, pd.DataFrame] = None,
                 is_train=True):
     def get_window_complexity_ratio(i):
         batch_chosen_events = chosen_events[i]
@@ -187,6 +187,7 @@ def get_rewards(matches: typing.List, chosen_events: np.ndarray,
     def unfound_match_penalty(matches_ratio):
         return UNFOUND_MATCHES_PENALTY * max(REQUIRED_MATCHES_PORTION - matches_ratio, 0)
 
+    chosen_events = chosen_events.cpu().numpy()
     get_denominator_fun = [get_window_steps_ratio, get_window_time_ratio, get_window_complexity_ratio,
                            get_window_event_num_ratio]
     found_matches_portions = []
@@ -221,7 +222,7 @@ def get_rewards(matches: typing.List, chosen_events: np.ndarray,
         rewards.append(reward)
 
     rewards = torch.tensor(rewards, device=device)
-    actual_found_matches_portion = found_matches_sum / matches_sum
+    actual_found_matches_portion = found_matches_sum / matches_sum if matches_sum != 0 else 1
     denominator = denominator / batch_size
 
     res = (rewards, found_matches_portions, actual_found_matches_portion, denominator)
