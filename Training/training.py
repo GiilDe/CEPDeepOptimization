@@ -127,7 +127,7 @@ def net_train(epochs, net, load_path=None, critic_net=None):
 
     prev_i = None
     if load_path is not None:
-        checkpoint = torch.load(load_path)
+        checkpoint = torch.load(load_path, map_location=torch.device('cpu'))
         net.load_state_dict(checkpoint['model_state_dict'])
         net.to(device=dataset.device)
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -170,7 +170,8 @@ def net_train(epochs, net, load_path=None, critic_net=None):
                 i += 1
                 processed_events += dataset.batch_size
             prev_i = None
-        while x is not None and m is not None:
+        # while x is not None and m is not None:
+        if False:
             if i != 0 and i % 1500 == 0:
                 save_checkpoint(i)
 
