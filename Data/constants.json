@@ -6,8 +6,8 @@
   "test_matches": "Data/test_matches.txt",
   "test_size": "20000000",
   "train_size": "200000000",
-  "pattern_window_size": "200",
-  "window_size": "1000",
+  "pattern_window_size": "100",
+  "window_size": "500",
   "match_size": "15",
   "event_size": "9"
 }
