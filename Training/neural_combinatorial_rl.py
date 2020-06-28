@@ -185,15 +185,15 @@ class Decoder(nn.Module):
             idxs = idxs * finished_batches_mask
             finished_batches_mask = finished_batches_mask * idxs.bool().int()
 
-            if torch.equal(finished_batches_mask, zeros):
-                outputs += [torch.zeros_like(outputs[0])] * (self.max_length - len(outputs))
-                selections += [torch.zeros_like(selections[0])] * (self.max_length - len(selections))
-                break
-
             decoder_input = embedded_inputs[idxs.data, range(batch_size), :]
             # use outs to point to next object
             outputs.append(probs)
             selections.append(idxs)
+
+            if torch.equal(finished_batches_mask, zeros):
+                outputs += [torch.zeros_like(outputs[0])] * (self.max_length - len(outputs))
+                selections += [torch.zeros_like(selections[0])] * (self.max_length - len(selections))
+                break
 
         return (outputs, selections), hidden
 
