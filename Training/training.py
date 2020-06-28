@@ -20,7 +20,7 @@ train_size = int((constants['train_size'] * steps) / constants['window_size'])
 test_size = int((constants['test_size'] * steps) / constants['window_size'])
 
 checkpoint_path = "training_data/checkpoint"
-batch_interval = 1000
+batch_interval = 1
 
 batch_interval = int(batch_interval / dataset.batch_size) * dataset.batch_size
 
