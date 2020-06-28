@@ -8,7 +8,7 @@
   "train_size": "200000000",
   "pattern_window_size": "100",
   "window_size": "500",
-  "match_size": "10",
+  "match_size": "8",
   "event_size": "9"
 }
 
