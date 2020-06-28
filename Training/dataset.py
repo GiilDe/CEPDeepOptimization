@@ -91,8 +91,8 @@ cond1 = OpenCEP.processing_utilities.Condition(lambda x, y: x.value < y.value, [
 cond2 = OpenCEP.processing_utilities.Condition(lambda x, y: x.value < y.value, [1, 2])
 cond3 = OpenCEP.processing_utilities.Condition(lambda x, y: x.value + y.value < 1, [4, 8])
 cond4 = OpenCEP.processing_utilities.Condition(lambda x, y, z: x.value + y.value < z.value, [4, 7, 12])
-cond5 = OpenCEP.processing_utilities.Condition(lambda x, y, z: x.value * y.value > 0.1, [9, 10])
-cond6 = OpenCEP.processing_utilities.Condition(lambda x, y, z, w: x.value * y.value > z.value * w.value, [9, 10])
+cond5 = OpenCEP.processing_utilities.Condition(lambda x, y, z: x.value * y.value > 0.1, [9, 10, 11])
+cond6 = OpenCEP.processing_utilities.Condition(lambda x, y, z, w: x.value * y.value > z.value * w.value, [3, 5, 6, 14])
 
 conds = [cond1, cond2, cond3, cond4, cond5, cond6]
 
