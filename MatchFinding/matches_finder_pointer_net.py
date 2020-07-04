@@ -19,37 +19,16 @@ class Encoder(nn.Module):
         if use_cuda:
             self.lstm = self.lstm.cuda()
         self.use_cuda = use_cuda
-        self.enc_init_state = self.init_hidden(hidden_dim)
-
-    def forward(self, x, hidden):
-        output, hidden = self.lstm(x, hidden)
-        return output, hidden
-
-    def init_hidden(self, hidden_dim):
-        """Trainable initial hidden state"""
-        # enc_init_hx = torch.zeros(hidden_dim, dtype=torch.double)
-        # if self.use_cuda:
-        #     enc_init_hx = enc_init_hx.cuda()
-        #
-        # enc_init_cx = torch.zeros(hidden_dim, dtype=torch.double)
-        # if self.use_cuda:
-        #     enc_init_cx = enc_init_cx.cuda()
-        #
-        # enc_init_hx = nn.Parameter(enc_init_hx, requires_grad=True)
-        # enc_init_cx = nn.Parameter(enc_init_cx, requires_grad=True)
-        # return enc_init_hx, enc_init_cx
-
-        # Reshaping (Expanding)
-        h0 = torch.zeros(1).unsqueeze(0).unsqueeze(0).repeat(self.n_layers,
-                                                      dataset.batch_size,
-                                                      self.hidden_dim)
-        c0 = torch.zeros(1).unsqueeze(0).unsqueeze(0).repeat(self.n_layers,
-                                                      dataset.batch_size,
-                                                      self.hidden_dim)
-        h0, c0 = nn.Parameter(h0.double(), requires_grad=True), nn.Parameter(c0.double(), requires_grad=True)
+        self.h = torch.zeros(1).unsqueeze(0).unsqueeze(0).repeat(self.n_layers, dataset.batch_size, self.hidden_dim)
+        self.c = torch.zeros(1).unsqueeze(0).unsqueeze(0).repeat(self.n_layers, dataset.batch_size, self.hidden_dim)
+        self.h, self.c = nn.Parameter(self.h.double(), requires_grad=True), \
+                         nn.Parameter(self.c.double(), requires_grad=True)
         if self.use_cuda:
-            h0, c0 = h0.cuda(), c0.cuda()
-        return h0, c0
+            self.h, self.c = self.h.cuda(), self.c.cuda()
+
+    def forward(self, x):
+        output, hidden = self.lstm(x, (self.h, self.c))
+        return output, hidden
 
 
 class Attention(nn.Module):
@@ -171,7 +150,8 @@ class Decoder(nn.Module):
 
         zeros = torch.zeros_like(finished_batches_mask)
         step = 0
-        while True:
+        MAX_STEPS = length * 5
+        for _ in range(MAX_STEPS):
             hx, cx, probs = recurrence(decoder_input, hidden)
             hidden = (hx, cx)
 
@@ -270,17 +250,9 @@ class PointerNetwork(nn.Module):
             if self.use_cuda:
                 beginning_padding = beginning_padding.cuda()
             inputs = torch.cat((beginning_padding, inputs), dim=0)
-        (encoder_hx, encoder_cx) = self.encoder.enc_init_state
-        # if self.encoder_bi_directional or self.encoder_num_layers > 1:
-        #     c = 2 if self.encoder_bi_directional else 1
-        #     encoder_hx = encoder_hx.unsqueeze(0).repeat(c * self.encoder_num_layers, inputs.size(1), 1)
-        #     encoder_cx = encoder_cx.unsqueeze(0).repeat(c * self.encoder_num_layers, inputs.size(1), 1)
-        # else:
-        #     encoder_hx = encoder_hx.unsqueeze(0).repeat(inputs.size(1), 1).unsqueeze(0)
-        #     encoder_cx = encoder_cx.unsqueeze(0).repeat(inputs.size(1), 1).unsqueeze(0)
 
         # encoder forward pass
-        enc_h, (enc_h_t, enc_c_t) = self.encoder(inputs, (encoder_hx, encoder_cx))
+        enc_h, (enc_h_t, enc_c_t) = self.encoder(inputs)
 
         if self.encoder_bi_directional:
             dec_init_state = (torch.cat([enc_h_t[-2], enc_h_t[-1]], dim=-1),

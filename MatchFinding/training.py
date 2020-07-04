@@ -118,6 +118,7 @@ def net_train(epochs, net, load_path=None):
             batches_lengths = torch.sum(m.bool().int(), dim=1)
             probs, actions_idxs = net.forward(x, batches_lengths)
 
+            probs = probs.sort()[0]
             net_matches_len = int(probs.size(0)/dataset.batch_size)
             if net_matches_len - m.size(1) > 0:
                 zeros = torch.zeros((dataset.batch_size, net_matches_len - m.size(1))).long()
