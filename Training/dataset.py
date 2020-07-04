@@ -21,7 +21,7 @@ REQUIRED_MATCHES_PORTION = 0.6
 FULL_WINDOW_COMPLEXITY = \
     2 ** (constants['pattern_window_size']) * (constants['window_size'] - constants['pattern_window_size'] + 1)
 
-convert_type = dict(zip(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], range(1, 9)))
+convert_type = dict(zip(constants['event_types'], range(1, len(constants['event_types']) + 1)))
 
 
 def get_batch_matches(M):
@@ -39,11 +39,10 @@ def get_batch_matches(M):
 
 def get_batch_events(X):
     def get_dummies(x):
-        padding = pd.DataFrame([['A', -1], ['B', -1], ['C', -1], ['D', -1],
-                                ['E', -1], ['F', -1], ['G', -1], ['H', -1]])
+        padding = pd.DataFrame([[type_, -1] for type_ in constants['event_types']])
         x = padding.append(x, ignore_index=True)
         x = pd.get_dummies(x)
-        x = x.drop(axis=0, labels=[0, 1, 2, 3, 4, 5, 6, 7])
+        x = x.drop(axis=0, labels=list(range(len(constants['event_types']))))
         return x
     try:
         batch_ = None

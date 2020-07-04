@@ -9,6 +9,7 @@
   "pattern_window_size": "100",
   "window_size": "500",
   "match_size": "8",
-  "event_size": "9"
+  "event_size": "9",
+  "event_types": ["A", "B", "C", "D", "E", "F", "G", "H"]
 }
 

@@ -7,7 +7,7 @@ from matches_finder_pointer_net import PointerNetwork
 
 tanh_exploration = 10
 use_tanh = True
-hidden_dim = 128
+hidden_dim = 64
 
 
 train_size = int(constants['train_size'] / constants['window_size'])

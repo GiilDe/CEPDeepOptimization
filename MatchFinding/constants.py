@@ -18,6 +18,9 @@ def decode(o):
 
 with open('../Data/constants_match_finder.json') as json_file:
     constants = json.load(json_file, object_hook=decode)
+    for i in range(len(constants['event_types'])):
+        constants['event_types'][i] = constants['event_types'][i][-1]
+
 
 
 
