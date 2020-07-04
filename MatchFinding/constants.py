@@ -7,7 +7,7 @@ def decode(o):
         try:
             return int(o)
         except ValueError:
-            return "../../" + o
+            return "../" + o
     elif isinstance(o, dict):
         return {k: decode(v) for k, v in o.items()}
     elif isinstance(o, list):
@@ -16,7 +16,7 @@ def decode(o):
         return o
 
 
-with open('../../Data/constants_match_finder.json') as json_file:
+with open('../Data/constants_match_finder.json') as json_file:
     constants = json.load(json_file, object_hook=decode)
 
 

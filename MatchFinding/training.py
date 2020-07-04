@@ -2,19 +2,16 @@ import torch
 import torch.functional
 import torch.optim as optim
 from constants import constants
-from torch.optim import lr_scheduler
 import dataset
-import numpy as np
-from MatchFinding.matches_finder_pointer_net import PointerNetwork
-from nets import *
+from matches_finder_pointer_net import PointerNetwork
 
 tanh_exploration = 10
 use_tanh = True
 hidden_dim = 128
 
 
-train_size = int(constants['train_size']  / constants['window_size'])
-test_size = int(constants['test_size']  / constants['window_size'])
+train_size = int(constants['train_size'] / constants['window_size'])
+test_size = int(constants['test_size'] / constants['window_size'])
 
 checkpoint_path = "training_data/checkpoint"
 
