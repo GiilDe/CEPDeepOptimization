@@ -270,3 +270,6 @@ class PointerNetwork(nn.Module):
                                                                  max_length)
 
         return pointer_probs, input_idxs
+
+    def __str__(self):
+        return "pointer net"
