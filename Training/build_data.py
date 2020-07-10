@@ -87,6 +87,8 @@ def combine(paths):
         for line in path:
             t.write(line)
 
+    t.close()
+
 
 if __name__ == "__main__":
     build_data_stream()
