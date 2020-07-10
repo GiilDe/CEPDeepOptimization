@@ -185,7 +185,7 @@ def net_test(net, epoch):
 
 if __name__ == "__main__":
     pointer_net = PointerNetwork(
-        embedding_dim=constants['event_size'],
+        embedding_dim=(len(constants['event_types']) + 1),
         hidden_dim=hidden_dim,
         max_decoding_len=constants['window_size'] + 1,
         n_glimpses=2,

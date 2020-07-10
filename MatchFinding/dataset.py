@@ -65,7 +65,7 @@ def get_batch_events(X):
         batch_ = next(X)
         batch = get_dummies(batch_)
         batch = torch.tensor(batch.to_numpy(), dtype=torch.float64, requires_grad=True, device=device) \
-            .reshape((batch_size, constants['window_size'], constants['event_size']))
+            .reshape((batch_size, constants['window_size'], (len(constants['event_types']) + 1)))
         return batch
     except (StopIteration, RuntimeError):
         print(batch_)

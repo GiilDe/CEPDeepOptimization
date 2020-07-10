@@ -5,13 +5,12 @@ import shutil
 
 
 def build_data_stream():
-    types = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
     for size, path in zip([constants['train_size'], constants['test_size']],
                           [constants['train_stream_path'], constants['test_stream_path']]):
         file = open(path, "w")
         counter = 0
         for _ in range(size):
-            name = str(random.choice(types))
+            name = str(random.choice(constants['event_types']))
             value = str(random.random())
             s_counter = str(counter)
             event = ','.join([name, value, s_counter]) + "\n"

@@ -280,7 +280,7 @@ def net_test(net, epoch, log_file):
 
 if __name__ == "__main__":
     pointer_net = NeuralCombOptNet(
-        input_dim=constants['event_size'],
+        input_dim=(len(constants['event_types']) + 1),
         embedding_dim=None,
         hidden_dim=hidden_dim,
         max_decoding_len=constants['window_size'] + 1,
@@ -295,7 +295,7 @@ if __name__ == "__main__":
     )
     linear_model = LinearWindowToFilters(dataset.batch_size)
     critic_network = CriticNetwork(
-        input_dim=constants['event_size'],
+        input_dim=(len(constants['event_types']) + 1),
         hidden_dim=hidden_dim,
         tanh_exploration=tanh_exploration,
         use_tanh=use_tanh,

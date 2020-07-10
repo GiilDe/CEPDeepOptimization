@@ -1,8 +1,8 @@
 select *
-from Event#length(28) as a1,
-Event#length(28) as a2,
-Event#length(28) as a3,
-Event#length(28) as a4
+from Event#length(10) as a1,
+Event#length(10) as a2,
+Event#length(10) as a3,
+Event#length(10) as a4
 where
 a1.count < a2.count and
 a2.count < a3.count and
@@ -11,8 +11,8 @@ a1.type = 'A' and
 a2.type = 'B' and
 a3.type = 'C' and
 a4.type = 'D' and
-a2.value < a3.value and
-a1.value < a2.value
+a1.value < a2.value and
+a2.value < a3.value
 done
 
 

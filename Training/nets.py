@@ -49,7 +49,7 @@ class ConvWindowToFilters(nn.Module):
     def __init__(self, batch_size, use_dropout):
         super(ConvWindowToFilters, self).__init__()
         self.conv = nn.Sequential(
-            nn.Conv1d(constants['event_size'], 6, kernel_size=3),
+            nn.Conv1d(len(constants['event_types']) + 1, 6, kernel_size=3),
             nn.ReLU(inplace=True),
             nn.Conv1d(6, 5, kernel_size=3),
             nn.ReLU(inplace=True),
@@ -97,8 +97,8 @@ class LinearWindowToFilters(nn.Module):
     def __init__(self, batch_size, use_dropout=False):
         super(LinearWindowToFilters, self).__init__()
         modules = []
-        # constants['event_size'] * constants['window_size'] = 150
-        modules += get_fc_layer(constants['event_size'] * constants['window_size'], 750, use_dropout)
+        # (len(constants['event_types']) + 1) * constants['window_size'] = 150
+        modules += get_fc_layer((len(constants['event_types']) + 1) * constants['window_size'], 750, use_dropout)
         modules += get_fc_layer(750, 600, use_dropout)
         modules += get_fc_layer(600, 450, use_dropout)
         modules += get_fc_layer(450, 300, use_dropout)
@@ -114,7 +114,7 @@ class LinearWindowToFilters(nn.Module):
         # events/events_probs dims: (batch_size, window_size)
         if batch_size is None:
             batch_size = self.batch_size
-        events = events.reshape((batch_size, constants['window_size'] * constants['event_size']))
+        events = events.reshape((batch_size, constants['window_size'] * (len(constants['event_types']) + 1)))
         t1 = time.perf_counter()
         events_probs = self.probs_net(events)
         t2 = time.perf_counter()

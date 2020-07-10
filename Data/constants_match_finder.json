@@ -8,7 +8,6 @@
   "pattern_window_size": "5",
   "window_size": "30",
   "match_size": "2",
-  "event_size": "5",
   "event_types": ["A", "B", "C", "D"]
 }
 
