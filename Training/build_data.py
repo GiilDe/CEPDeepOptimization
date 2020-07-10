@@ -64,5 +64,29 @@ def pad_matches():
     pad_matches_(False)
 
 
+def split_file(file_path, splits_num):
+    read_file = open(file_path, "r")
+    lines = 0
+    for _ in read_file:
+        lines += 1
+    read_file.close()
+    lines_per_split = lines/splits_num
+    read_file = open(file_path, "r")
+    split_lines = 0
+    split_num = 1
+    for line in read_file:
+        if split_lines == 0:
+            split_path = open(file_path + split_num, "w")
+            split_num += 1
+        split_path.write(line)
+
+
+def combine(paths):
+    t = open("file", "w")
+    for path in paths:
+        for line in path:
+            t.write(line)
+
+
 if __name__ == "__main__":
     build_data_stream()
