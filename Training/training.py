@@ -14,13 +14,12 @@ tanh_exploration = 10
 use_tanh = True
 hidden_dim = 64
 
-steps = 1
 
-train_size = int((constants['train_size'] * steps) / constants['window_size'])
-test_size = int((constants['test_size'] * steps) / constants['window_size'])
+train_size = int((constants['train_size']) / constants['window_size'])
+test_size = int((constants['test_size']) / constants['window_size'])
 
 checkpoint_path = "training_data/checkpoint"
-batch_interval = 1
+batch_interval = 1000
 
 batch_interval = int(batch_interval / dataset.batch_size) * dataset.batch_size
 
@@ -144,7 +143,6 @@ def net_train(epochs, net, load_path=None, critic_net=None):
     details += "required matches portion = " + str(dataset.REQUIRED_MATCHES_PORTION) + "\n"
     details += "using critic net? " + ("yes" if critic_net is not None else "no (using moving average)") + "\n"
     details += "net type: " + str(net) + "\n"
-    details += "steps = " + str(steps) + "\n"
     details += "time calculation: " + dataset.time_calc_types[dataset.time_calc_index] + "\n"
     print(details)
     log_file.write(details)
@@ -170,37 +168,33 @@ def net_train(epochs, net, load_path=None, critic_net=None):
                 i += 1
                 processed_events += dataset.batch_size
             prev_i = None
-        # while x is not None and m is not None:
-        if False:
+        while x is not None and m is not None:
             if i != 0 and i % 1500 == 0:
                 save_checkpoint(i)
 
             events_probs, net_time = net.forward(x)
 
-            losses = torch.zeros(1, device=dataset.device)
-            for _ in range(steps):
-                chosen_events = net.sample_events(events_probs)
+            chosen_events = net.sample_events(events_probs)
 
-                rewards, found_matches_portions, found_matches_portion, denominator = \
-                    dataset.get_rewards(m, chosen_events, e if use_time_ratio else None)
+            rewards, found_matches_portions, found_matches_portion, denominator = \
+                dataset.get_rewards(m, chosen_events, e if use_time_ratio else None)
 
-                log_probs = net.get_log_probs(events_probs, chosen_events)
+            log_probs = net.get_log_probs(events_probs, chosen_events)
 
-                epoch_average_reward += rewards.mean().item()
+            epoch_average_reward += rewards.mean().item()
 
-                if critic_net is not None:
-                    critic_out = critic_net(x.detach())
+            if critic_net is not None:
+                critic_out = critic_net(x.detach())
+            else:
+                if processed_events == 0:
+                    critic_exp_mvg_avg = rewards.mean()
                 else:
-                    if processed_events == 0:
-                        critic_exp_mvg_avg = rewards.mean()
-                    else:
-                        critic_exp_mvg_avg = (critic_exp_mvg_avg * beta) + ((1. - beta) * rewards.mean())
+                    critic_exp_mvg_avg = (critic_exp_mvg_avg * beta) + ((1. - beta) * rewards.mean())
 
-                normalizer = critic_out if critic_net is not None else critic_exp_mvg_avg
-                advantage = rewards - normalizer
-                step_losses = (-1) * log_probs * advantage.detach()
-                step_losses = step_losses.mean()
-                losses += step_losses
+            normalizer = critic_out if critic_net is not None else critic_exp_mvg_avg
+            advantage = rewards - normalizer
+            losses = (-1) * log_probs * advantage.detach()
+            losses = losses.mean()
 
             optimizer.zero_grad()
             losses.backward()
