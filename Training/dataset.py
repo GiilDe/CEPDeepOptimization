@@ -86,25 +86,14 @@ def initialize_data_matches(is_train):
     return M
 
 
-# cond1 = OpenCEP.processing_utilities.Condition(lambda x, y: x.value < y.value, [0, 1])
-# cond2 = OpenCEP.processing_utilities.Condition(lambda x, y: x.value < y.value, [1, 2])
-# cond3 = OpenCEP.processing_utilities.Condition(lambda x, y: x.value + y.value < 1, [4, 8])
-# cond4 = OpenCEP.processing_utilities.Condition(lambda x, y, z: x.value + y.value < z.value, [4, 7, 12])
-# cond5 = OpenCEP.processing_utilities.Condition(lambda x, y, z: x.value * y.value > 0.1, [9, 10, 11])
-# cond6 = OpenCEP.processing_utilities.Condition(lambda x, y, z, w: x.value * y.value > z.value * w.value, [3, 5, 6, 14])
-
 cond1 = OpenCEP.processing_utilities.Condition(lambda x, y: x.value < y.value, [0, 1])
-cond2 = OpenCEP.processing_utilities.Condition(lambda x, y: x.value + y.value < 1, [4, 6])
-cond3 = OpenCEP.processing_utilities.Condition(lambda x, y, z: x.value + y.value < z.value, [0, 5, 7])
-cond5 = OpenCEP.processing_utilities.Condition(lambda x, y, z, w: x.value * y.value > z.value * w.value, [3, 5, 6, 7])
-
-# conds = [cond1, cond2, cond3, cond4, cond5, cond6]
-
-conds = [cond1, cond2, cond3, cond5]
+cond2 = OpenCEP.processing_utilities.Condition(lambda x, y: x.value < y.value, [1, 2])
 
 
-# event_types = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'E']
-event_types = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'A']
+conds = [cond1, cond2]
+
+
+event_types = ['A', 'B', 'C', 'D']
 event_types_with_identifiers = \
     [OpenCEP.processing_utilities.EventTypeOrPatternAndIdentifier(type, i) for i, type in enumerate(event_types)]
 seq_event_pattern = OpenCEP.processing_utilities. \
