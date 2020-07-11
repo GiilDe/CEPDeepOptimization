@@ -96,5 +96,8 @@ def combine(paths):
 
 
 if __name__ == "__main__":
-    split_file(constants['train_stream_path'], 25)
-    # combine(["1.txt", "2.txt", "3.txt", "4.txt", "5.txt", "6.txt", "7.txt", "8.txt", "9.txt", "10.txt"])
+    # split_file(constants['train_stream_path'], 25)
+    l = list(range(1, 26))
+    for i in range(len(l)):
+        l[i] = str(l[i]) + ".txt"
+    combine(l)
