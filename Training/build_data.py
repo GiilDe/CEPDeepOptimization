@@ -72,23 +72,29 @@ def split_file(file_path, splits_num):
     read_file.close()
     lines_per_split = lines/splits_num
     read_file = open(file_path, "r")
-    split_lines = 0
+    written_lines = 0
     split_num = 1
+    split_path = open(str(split_num) + ".txt", "w")
     for line in read_file:
-        if split_lines == 0:
-            split_path = open(file_path + split_num, "w")
+        if written_lines != 0 and written_lines % lines_per_split == 0:
+            split_path.close()
             split_num += 1
+            split_path = open(str(split_num) + ".txt", "w")
         split_path.write(line)
+        written_lines += 1
+    split_path.close()
 
 
 def combine(paths):
-    t = open("file", "w")
+    t = open("file.txt", "w")
     for path in paths:
-        for line in path:
-            t.write(line)
+        with open(path, "r") as path:
+            for line in path:
+                t.write(line)
 
     t.close()
 
 
 if __name__ == "__main__":
-    build_data_stream()
+    split_file(constants['train_stream_path'], 25)
+    # combine(["1.txt", "2.txt", "3.txt", "4.txt", "5.txt", "6.txt", "7.txt", "8.txt", "9.txt", "10.txt"])
